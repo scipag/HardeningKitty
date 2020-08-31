@@ -69,7 +69,7 @@ The lists were last updated/checked against the following Microsoft Security Bas
 	- Security baseline for Office 365 ProPlus, version 1908
 	- 0x6d69636b own knowledge 
 * finding\_list\_msft\_security\_baseline\_edge\_machine
-	- Security baseline for Microsoft Edge, version 84
+	- Security baseline for Microsoft Edge, version 85
 * finding\_list\_msft\_security\_baseline\_windows\_10\_machine
 	- Security baseline for Windows 10 and Windows Server, version 2004
 * finding\_list\_msft\_security\_baseline\_windows\_server\_dc\_machine

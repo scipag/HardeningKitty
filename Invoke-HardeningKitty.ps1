@@ -310,8 +310,6 @@
     Write-ProtocolEntry -Text $Message -LogLevel "Notime"
     $Message = "Domain role: "+$MachineInformation.CsDomainRole
     Write-ProtocolEntry -Text $Message -LogLevel "Notime"
-    $Message = "Uptime: "+$MachineInformation.OsUptime
-    Write-ProtocolEntry -Text $Message -LogLevel "Notime"
     $Message = "Install date: "+$MachineInformation.OsInstallDate
     Write-ProtocolEntry -Text $Message -LogLevel "Notime"
     $Message = "Last Boot Time: "+$MachineInformation.OsLastBootUpTime
@@ -335,7 +333,8 @@
     
     $Message = "Username: "+[Security.Principal.WindowsIdentity]::GetCurrent().Name
     Write-ProtocolEntry -Text $Message -LogLevel "Notime"
-    $Message = "Is Admin: "+([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
+    $IsAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
+    $Message = "Is Admin: "+$IsAdmin
     Write-ProtocolEntry -Text $Message -LogLevel "Notime"
 
     #
@@ -397,7 +396,7 @@
             # Depending on the registry structure, the value cannot be accessed directly, but must be found within a data structure
             # If the registry entry is not available, a default value is used. This must be specified in the finding list.
             #
-            If ($Finding.Method -eq 'RegistryList') {
+            ElseIf ($Finding.Method -eq 'RegistryList') {
 
                 If (Test-Path -Path $Finding.RegistryPath) {
                 
@@ -424,7 +423,13 @@
             # The desired value is not output directly, some output lines can be ignored
             # and are therefore skipped. If the output changes, the parsing must be adjusted :(
             #
-            If ($Finding.Method -eq 'auditpol') {
+            ElseIf ($Finding.Method -eq 'auditpol') {
+
+                If (-not($IsAdmin)) {
+                    $Message = "ID "+$Finding.ID+", "+$Finding.Name+", Method "+$Finding.Method+" requires admin priviliges. Test skipped."
+                    Write-ProtocolEntry -Text $Message -LogLevel "Error"
+                    Continue
+                }
                                             
                 try {
                 
@@ -446,7 +451,13 @@
             # It may be necessary to use the /domain parameter when calling net.exe.
             # The values of the user executing the script are read out. These may not match the password policy.
             #
-            If ($Finding.Method -eq 'accountpolicy') {
+            ElseIf ($Finding.Method -eq 'accountpolicy') {
+
+                If (-not($IsAdmin)) {
+                    $Message = "ID "+$Finding.ID+", "+$Finding.Name+", Method "+$Finding.Method+" requires admin priviliges. Test skipped."
+                    Write-ProtocolEntry -Text $Message -LogLevel "Error"
+                    Continue
+                }
                                            
                 try {
                     
@@ -478,8 +489,14 @@
             # The values used are from the Microsoft documentation at:
             # https://docs.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/user-rights-assignment
             #
-            If ($Finding.Method -eq 'accesschk') {
-                                           
+            ElseIf ($Finding.Method -eq 'accesschk') {
+
+                If (-not($IsAdmin)) {
+                    $Message = "ID "+$Finding.ID+", "+$Finding.Name+", Method "+$Finding.Method+" requires admin priviliges. Test skipped."
+                    Write-ProtocolEntry -Text $Message -LogLevel "Error"
+                    Continue
+                }
+                     
                 try { 
                                    
                     $ResultOutput = &$BinaryAccesschk -accepteula -nobanner -a $Finding.MethodArgument
@@ -508,7 +525,13 @@
             # Windows Optional Feature
             # Yay, a native PowerShell function! The status of the feature can easily be read out directly.
             #
-            If ($Finding.Method -eq 'WindowsOptionalFeature') {
+            ElseIf ($Finding.Method -eq 'WindowsOptionalFeature') {
+
+                If (-not($IsAdmin)) {
+                    $Message = "ID "+$Finding.ID+", "+$Finding.Name+", Method "+$Finding.Method+" requires admin priviliges. Test skipped."
+                    Write-ProtocolEntry -Text $Message -LogLevel "Error"
+                    Continue
+                }
 
                 try {
                     
@@ -525,7 +548,7 @@
             # Via a CIM instance classes can be read from the CIM server.
             # Afterwards, you have to search for the correct property within the class.
             #
-            If ($Finding.Method -eq 'CimInstance') {
+            ElseIf ($Finding.Method -eq 'CimInstance') {
                 
                 try {
 
@@ -548,7 +571,13 @@
             # The values are saved from a PowerShell function into an object.
             # The desired arguments can be accessed directly.
             #
-            If ($Finding.Method -eq 'BitLockerVolume') {
+            ElseIf ($Finding.Method -eq 'BitLockerVolume') {
+
+                If (-not($IsAdmin)) {
+                    $Message = "ID "+$Finding.ID+", "+$Finding.Name+", Method "+$Finding.Method+" requires admin priviliges. Test skipped."
+                    Write-ProtocolEntry -Text $Message -LogLevel "Error"
+                    Continue
+                }
 
                 try {
                     
@@ -569,7 +598,7 @@
             # PowerShell Language Mode
             # This is a single purpose function, the desired configuration is output directly.
             #
-            If ($Finding.Method -eq 'LanguageMode') {
+            ElseIf ($Finding.Method -eq 'LanguageMode') {
 
                 try {
                                     
@@ -586,7 +615,7 @@
             # The values are saved from a PowerShell function into an object.
             # The desired arguments can be accessed directly.
             #
-            If ($Finding.Method -eq 'MpPreference') {
+            ElseIf ($Finding.Method -eq 'MpPreference') {
 
                 try {
                                     
@@ -606,7 +635,7 @@
             # Since the object has several dimensions and there is only one dimension
             # in the finding list (lazy) a workaround with split must be done...
             #
-            If ($Finding.Method -eq 'Processmitigation') {
+            ElseIf ($Finding.Method -eq 'Processmitigation') {
 
                 try {  
                                                   
@@ -625,7 +654,13 @@
             # bcdedit
             # Again, the output of a tool must be searched and parsed. Ugly...
             #
-            If ($Finding.Method -eq 'bcdedit') {
+            ElseIf ($Finding.Method -eq 'bcdedit') {
+
+                If (-not($IsAdmin)) {
+                    $Message = "ID "+$Finding.ID+", "+$Finding.Name+", Method "+$Finding.Method+" requires admin priviliges. Test skipped."
+                    Write-ProtocolEntry -Text $Message -LogLevel "Error"
+                    Continue
+                }
 
                 try {
                                     
@@ -649,7 +684,7 @@
             # to a file, which means HardeningKitty must create a temporary file
             # and afterwards delete it. HardeningKitty is very orderly.
             #
-            If ($Finding.Method -eq 'secedit') {
+            ElseIf ($Finding.Method -eq 'secedit') {
 
                 try {
                     
@@ -677,7 +712,7 @@
                 $ResultPassed = $false
                 Switch($Finding.Operator) {
 
-                    "="  { If ($Result -eq $Finding.RecommendedValue) { $ResultPassed = $true }; Break}
+                    "="  { If ([string] $Result -eq $Finding.RecommendedValue) { $ResultPassed = $true }; Break}
                     "<=" { try { If ([int]$Result -le [int]$Finding.RecommendedValue) { $ResultPassed = $true }} catch { $ResultPassed = $false }; Break}
                     ">=" { try { If ([int]$Result -ge [int]$Finding.RecommendedValue) { $ResultPassed = $true }} catch { $ResultPassed = $false }; Break}
                     "contains" { If ($Result.Contains($Finding.RecommendedValue)) { $ResultPassed = $true }; Break}

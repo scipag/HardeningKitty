@@ -11,7 +11,7 @@
 
 
         Author:  Michael Schneider
-        License: MIT    
+        License: MIT
         Required Dependencies: AccessChk by Mark Russinovich
         Optional Dependencies: None
 
@@ -168,7 +168,12 @@
             $Text
         )     
 
-        Add-Content -Path $LogFile -Value $Text
+        try {
+            Add-Content -Path $LogFile -Value $Text -ErrorAction Stop
+        } catch {
+            Write-ProtocolEntry -Text "Error while writing log entries into $LogFile. Aborting..." -LogLevel "Error"
+            Break            
+        }
     }
 
     Function Write-ResultEntry {
@@ -196,7 +201,7 @@
             Switch ($SeverityLevel) {
 
                 "Passed" { $Emoji = [char]::ConvertFromUtf32(0x1F63A); $Message = "[$Emoji] $Text"; Write-Host -ForegroundColor Gray $Message; Break}
-                "Low"    { $Emoji = [char]::ConvertFromUtf32(0x1F63C); $Message = "[$Emoji] $Text"; Write-Host -ForegroundColor Cyan $Message; Break}        
+                "Low"    { $Emoji = [char]::ConvertFromUtf32(0x1F63C); $Message = "[$Emoji] $Text"; Write-Host -ForegroundColor Cyan $Message; Break}
                 "Medium" { $Emoji = [char]::ConvertFromUtf32(0x1F63F); $Message = "[$Emoji] $Text"; Write-Host -ForegroundColor Yellow $Message; Break}
                 "High"   { $Emoji = [char]::ConvertFromUtf32(0x1F640); $Message = "[$Emoji] $Text"; Write-Host -ForegroundColor Red $Message; Break}
                 Default  { $Message = "[*] $Text"; Write-Host $Message; }
@@ -207,7 +212,7 @@
             Switch ($SeverityLevel) {
 
                 "Passed" { $Message = "[+] $Text"; Write-Host -ForegroundColor Gray $Message; Break}
-                "Low"    { $Message = "[-] $Text"; Write-Host -ForegroundColor Cyan $Message; Break}        
+                "Low"    { $Message = "[-] $Text"; Write-Host -ForegroundColor Cyan $Message; Break}
                 "Medium" { $Message = "[$] $Text"; Write-Host -ForegroundColor Yellow $Message; Break}
                 "High"   { $Message = "[!] $Text"; Write-Host -ForegroundColor Red $Message; Break}
                 Default  { $Message = "[*] $Text"; Write-Host $Message; }
@@ -231,7 +236,12 @@
             $Text
         )
 
-        Add-Content -Path $ReportFile -Value $Text
+        try {
+            Add-Content -Path $ReportFile -Value $Text -ErrorAction Stop
+        } catch {
+            Write-ProtocolEntry -Text "Error while writing the result into $ReportFile. Aborting..." -LogLevel "Error"
+            Break            
+        }
     }
 
     #
@@ -244,7 +254,7 @@
     $Hostname = $env:COMPUTERNAME.ToLower()
     $FileDate = Get-Date -Format yyyyMMdd-HHmm
 
-    If ($Log -and $LogFile.Length -eq 0) {        
+    If ($Log -and $LogFile.Length -eq 0) {
         $LogFile = "hardeningkitty_log_$Hostname-$FileDate.log"
     }
     If ($Report -and $ReportFile.Length -eq 0) {
@@ -254,6 +264,15 @@
         $Message = '"ID","Name","Severity","Result","Recommended"'
         Add-ResultEntry -Text $Message
     }
+
+    #
+    # Statistics
+    #
+    $StatsPassed = 0
+    $StatsLow = 0
+    $StatsMedium = 0
+    $StatsHigh = 0
+    $StatsTotal = 0
 
     #
     # Header
@@ -432,7 +451,7 @@
                 }
                                             
                 try {
-                
+
                     $SubCategory = $Finding.Name    
                     $ResultOutput = &$BinaryAuditpol /get /subcategory:"$SubCategory"
                     
@@ -453,12 +472,6 @@
             #
             ElseIf ($Finding.Method -eq 'accountpolicy') {
 
-                If (-not($IsAdmin)) {
-                    $Message = "ID "+$Finding.ID+", "+$Finding.Name+", Method "+$Finding.Method+" requires admin priviliges. Test skipped."
-                    Write-ProtocolEntry -Text $Message -LogLevel "Error"
-                    Continue
-                }
-                                           
                 try {
                     
                     $ResultOutput = &$BinaryNet accounts
@@ -466,13 +479,46 @@
                     # "Parse" account policy
                     Switch ($Finding.Name) {
                        "Force user logoff how long after time expires" { $ResultOutput[0] -match '([a-zA-Z:, /-]+)  ([a-z0-9, ]+)' | Out-Null; $Result=$Matches[2]; Break}
-                       "Minimum password age"                          { $ResultOutput[1] -match '([a-zA-Z:, /-]+)  ([a-z0-9, ]+)' | Out-Null; $Result=$Matches[2]; Break}
-                       "Maximum password age"                          { $ResultOutput[2] -match '([a-zA-Z:, /-]+)  ([a-z0-9, ]+)' | Out-Null; $Result=$Matches[2]; Break}
-                       "Minimum password length"                       { $ResultOutput[3] -match '([a-zA-Z:, /-]+)  ([a-z0-9, ]+)' | Out-Null; $Result=$Matches[2]; Break}
-                       "Length of password history maintained"         { $ResultOutput[4] -match '([a-zA-Z:, /-]+)  ([a-z0-9, ]+)' | Out-Null; $Result=$Matches[2]; Break}
-                       "Account lockout threshold"                     { $ResultOutput[5] -match '([a-zA-Z:, /-]+)  ([a-z0-9, ]+)' | Out-Null; $Result=$Matches[2]; Break}
-                       "Account lockout duration"                      { $ResultOutput[6] -match '([a-zA-Z:, /-]+)  ([a-z0-9, ]+)' | Out-Null; $Result=$Matches[2]; Break}
-                       "Reset account lockout counter"                 { $ResultOutput[7] -match '([a-zA-Z:, /-]+)  ([a-z0-9, ]+)' | Out-Null; $Result=$Matches[2]; Break}
+                       "Network security: Force logoff when logon hours expires" { $ResultOutput[0] -match '([a-zA-Z:, /-]+)  ([a-z0-9, ]+)' | Out-Null; $Result=$Matches[2]; Break}
+                       "Minimum password age" { $ResultOutput[1] -match '([a-zA-Z:, /-]+)  ([a-z0-9, ]+)' | Out-Null; $Result=$Matches[2]; Break}
+                       "Maximum password age" { $ResultOutput[2] -match '([a-zA-Z:, /-]+)  ([a-z0-9, ]+)' | Out-Null; $Result=$Matches[2]; Break}
+                       "Minimum password length" { $ResultOutput[3] -match '([a-zA-Z:, /-]+)  ([a-z0-9, ]+)' | Out-Null; $Result=$Matches[2]; Break}
+                       "Length of password history maintained" { $ResultOutput[4] -match '([a-zA-Z:, /-]+)  ([a-z0-9, ]+)' | Out-Null; $Result=$Matches[2]; Break}
+                       "Account lockout threshold" { $ResultOutput[5] -match '([a-zA-Z:, /-]+)  ([a-z0-9, ]+)' | Out-Null; $Result=$Matches[2]; Break}
+                       "Account lockout duration" { $ResultOutput[6] -match '([a-zA-Z:, /-]+)  ([a-z0-9, ]+)' | Out-Null; $Result=$Matches[2]; Break}
+                       "Reset account lockout counter" { $ResultOutput[7] -match '([a-zA-Z:, /-]+)  ([a-z0-9, ]+)' | Out-Null; $Result=$Matches[2]; Break}
+                    }
+
+                } catch {
+                    $Result = $Finding.DefaultValue
+                }
+            }
+
+            #
+            # Get Local Account Information
+            # The PowerShell function Get-LocalUser is used for this.
+            # In order to get the correct user, the query is made via the SID,
+            # the base value of the computer must first be retrieved.
+            #
+            ElseIf ($Finding.Method -eq 'localaccount') {
+
+                try {
+
+                    # Get Computer SID
+                    $ComputerSid = ((Get-LocalUser | Select-Object -First 1).SID).AccountDomainSID.ToString()
+
+                    # Get User Status
+                    $Sid = $ComputerSid+"-"+$Finding.MethodArgument
+                    $ResultOutput = Get-LocalUser -SID $Sid
+
+                    If ($Finding.Name.Contains("account status")){
+                        $Result = $ResultOutput.Enabled
+                    }
+                    ElseIf ($Finding.Name.Contains("Renames")) {
+                        $Result = $ResultOutput.Name
+                    }
+                    Else {
+                        $Result = $Finding.DefaultValue
                     }
 
                 } catch {
@@ -496,7 +542,7 @@
                     Write-ProtocolEntry -Text $Message -LogLevel "Error"
                     Continue
                 }
-                     
+
                 try { 
                                    
                     $ResultOutput = &$BinaryAccesschk -accepteula -nobanner -a $Finding.MethodArgument
@@ -510,7 +556,7 @@
                             Break
 
                         } Else {
-                            
+
                             [String] $Result += $ResultEntry.Trim()+";"
                         }
                     }
@@ -518,7 +564,7 @@
                     $Result = $Result -replace “.$”
                 } catch {
                     $Result = $Finding.DefaultValue
-                }                
+                }
             }
 
             #
@@ -534,7 +580,7 @@
                 }
 
                 try {
-                    
+
                     $ResultOutput = Get-WindowsOptionalFeature -Online -FeatureName $Finding.MethodArgument 
                     $Result = $ResultOutput.State
 
@@ -549,12 +595,12 @@
             # Afterwards, you have to search for the correct property within the class.
             #
             ElseIf ($Finding.Method -eq 'CimInstance') {
-                
+
                 try {
 
                     $ResultList = Get-CimInstance -ClassName $Finding.ClassName -Namespace $Finding.Namespace
                     $Property = $Finding.Property
-                                         
+
                     If ($ResultList.$Property | Where-Object { $_ -like "*"+$Finding.RecommendedValue+"*" }) {
                         $Result = $Finding.RecommendedValue
                     } Else {
@@ -580,7 +626,7 @@
                 }
 
                 try {
-                    
+
                     $ResultOutput = Get-BitLockerVolume -MountPoint C:
                     If ($ResultOutput.VolumeType -eq 'OperatingSystem') {
                         $ResultArgument = $Finding.MethodArgument 
@@ -601,7 +647,7 @@
             ElseIf ($Finding.Method -eq 'LanguageMode') {
 
                 try {
-                                    
+
                     $ResultOutput = $ExecutionContext.SessionState.LanguageMode                    
                     $Result = $ResultOutput
 
@@ -611,17 +657,45 @@
             }
 
             #
-            # Windows Defender Preferences
+            # Microsoft Defender Preferences
             # The values are saved from a PowerShell function into an object.
             # The desired arguments can be accessed directly.
             #
             ElseIf ($Finding.Method -eq 'MpPreference') {
 
                 try {
-                                    
+
                     $ResultOutput = Get-MpPreference
                     $ResultArgument = $Finding.MethodArgument 
                     $Result = $ResultOutput.$ResultArgument
+
+                } catch {
+                    $Result = $Finding.DefaultValue
+                }
+            }
+
+            #
+            # Microsoft Defender Preferences - Attack surface reduction rules (ASR rules)
+            # The values are saved from a PowerShell function into an object.
+            # The desired arguments can be accessed directly.
+            #
+            ElseIf ($Finding.Method -eq 'MpPreferenceAsr') {
+
+                try {
+
+                    $ResultOutput = Get-MpPreference
+                    $ResultAsrIds = $ResultOutput.AttackSurfaceReductionRules_Ids
+                    $ResultAsrActions = $ResultOutput.AttackSurfaceReductionRules_Actions
+                    $Counter = 0
+
+                    ForEach ($AsrRule in $ResultAsrIds) {
+
+                        If ($AsrRule -eq $Finding.MethodArgument) {
+                            $Result = $ResultAsrActions[$Counter]
+                            Continue
+                        }
+                        $Counter++
+                    }
 
                 } catch {
                     $Result = $Finding.DefaultValue
@@ -638,7 +712,7 @@
             ElseIf ($Finding.Method -eq 'Processmitigation') {
 
                 try {  
-                                                  
+
                     $ResultOutput = Get-Processmitigation -System
                     $ResultArgumentArray = $Finding.MethodArgument.Split(".")
                     $ResultArgument0 = $ResultArgumentArray[0]
@@ -663,10 +737,10 @@
                 }
 
                 try {
-                                    
+
                     $ResultOutput = &$BinaryBcdedit
                     $ResultOutput = $ResultOutput | Where-Object { $_ -like "*"+$Finding.RecommendedValue+"*" }
-                    
+
                     If ($ResultOutput -match ' ([a-z,A-Z]+)') {
                         $Result = $Matches[1]
                     } Else {
@@ -679,23 +753,31 @@
             }
 
             #
-            # secedit
-            # Configures and analyzes system security, results are written
-            # to a file, which means HardeningKitty must create a temporary file
-            # and afterwards delete it. HardeningKitty is very orderly.
+            # FirewallRule
+            # Search for a specific firewall rule with a given name
             #
-            ElseIf ($Finding.Method -eq 'secedit') {
+            ElseIf ($Finding.Method -eq 'FirewallRule') {
 
                 try {
-                    
-                    $OutputSecedit = New-TemporaryFile
-                    &$BinarySecedit /export /areas SecurityPolicy /cfg $OutputSecedit /quiet
 
-                    $ResultOutput = Select-String -Path $OutputSecedit -Pattern $Finding.MethodArgument
-                    $ResultOutput = $ResultOutput.Line.Split(" ")
-                    $Result = $ResultOutput[2]
+                    $ResultOutput = Get-NetFirewallRule -DisplayName $Finding.Name 2> $null
+                    $Result = $ResultOutput.Enabled
 
-                    Remove-Item $OutputSecedit.FullName -Force
+                } catch {
+                    $Result = $Finding.DefaultValue
+                }
+            }
+
+            #
+            # Service
+            # Check the status of a service
+            #
+            ElseIf ($Finding.Method -eq 'service') {
+
+                try {
+
+                    $ResultOutput = Get-Service -Name $Finding.MethodArgument 2> $null
+                    $Result = $ResultOutput.StartType
 
                 } catch {
                     $Result = $Finding.DefaultValue
@@ -716,6 +798,7 @@
                     "<=" { try { If ([int]$Result -le [int]$Finding.RecommendedValue) { $ResultPassed = $true }} catch { $ResultPassed = $false }; Break}
                     ">=" { try { If ([int]$Result -ge [int]$Finding.RecommendedValue) { $ResultPassed = $true }} catch { $ResultPassed = $false }; Break}
                     "contains" { If ($Result.Contains($Finding.RecommendedValue)) { $ResultPassed = $true }; Break}
+                    "!="  { If ([string] $Result -ne $Finding.RecommendedValue) { $ResultPassed = $true }; Break}
                 }
 
                 If ($ResultPassed) {
@@ -727,16 +810,25 @@
                     If ($Log) {
                         Add-ProtocolEntry -Text $Message
                     }
-                    
+
                     If ($Report) {
                         $Message = '"'+$Finding.ID+'","'+$Finding.Name+'","Passed","'+$Result+'"'
                         Add-ResultEntry -Text $Message
                     }
 
+                    # Increment Counter
+                    $StatsPassed++
+
                 } Else {
 
                     # Failed
-                    $Message = "ID "+$Finding.ID+", "+$Finding.Name+", Result=$Result, Recommended="+$Finding.RecommendedValue+", Severity="+$Finding.Severity
+                    If ($Finding.Operator -eq "!=") {
+                        $Message = "ID "+$Finding.ID+", "+$Finding.Name+", Result=$Result, Recommended=Not "+$Finding.RecommendedValue+", Severity="+$Finding.Severity
+                    }
+                    Else {
+                        $Message = "ID "+$Finding.ID+", "+$Finding.Name+", Result=$Result, Recommended="+$Finding.RecommendedValue+", Severity="+$Finding.Severity
+                    }
+
                     Write-ResultEntry -Text $Message -SeverityLevel $Finding.Severity
 
                     If ($Log) {
@@ -746,6 +838,14 @@
                     If ($Report) {
                         $Message = '"'+$Finding.ID+'","'+$Finding.Name+'","'+$Finding.Severity+'","'+$Result+'","'+$Finding.RecommendedValue+'"'
                         Add-ResultEntry -Text $Message
+                    }
+
+                    # Increment Counter
+                    Switch($Finding.Severity) {
+
+                        "Low"    { $StatsLow++; Break}
+                        "Medium" { $StatsMedium++; Break}
+                        "High"   { $StatsHigh++; Break}
                     }
                 }
 
@@ -769,12 +869,549 @@
 
     } Elseif ($Mode = "HailMary") {
 
-        # Todo
-        # Set all hardening settings in findings file
-        # You can do that as long as you know you're doing
+        # A CSV finding list is imported. HardeningKitty has one machine and one user list.
+        If ($FileFindingList.Length -eq 0) {
+
+            $CurrentLication = Get-Location
+            $FileFindingList = "$CurrentLication\lists\finding_list_0x6d69636b_machine.csv"
+        }
+
+        $FindingList = Import-Csv -Path $FileFindingList -Delimiter ","
+        $LastCategory = ""
+        $ProcessmitigationEnableArray = @()
+        $ProcessmitigationDisableArray = @()
+
+        ForEach ($Finding in $FindingList) {
+
+            # Todo
+            # Set all hardening settings in findings file
+            # You can do that as long as you know you're doing
+
+            #
+            # Category
+            #
+            If ($LastCategory -ne $Finding.Category) {
+
+                $Message = "Starting Category " + $Finding.Category
+                Write-Output "`n"                
+                Write-ProtocolEntry -Text $Message -LogLevel "Info"
+                $LastCategory = $Finding.Category
+            }
+
+            #
+            # accesschk
+            # Use secedit to set user rights assignment
+            #
+            If ($Finding.Method -eq 'accesschk') {
+
+                If (-not($IsAdmin)) {
+                    $Message = "ID "+$Finding.ID+", "+$Finding.Name+", Method "+$Finding.Method+" requires admin priviliges. Test skipped."
+                    Write-ProtocolEntry -Text $Message -LogLevel "Error"
+                    Continue
+                }
+
+                $TempFileName = [System.IO.Path]::GetTempFileName()
+                $TempDbFileName = [System.IO.Path]::GetTempFileName()
+
+                &$BinarySecedit /export /cfg $TempFileName /areas USER_RIGHTS | Out-Null
+
+                if($Finding.RecommendedValue -eq "") {
+                    (Get-Content -Encoding unicode $TempFileName) -replace "$($Finding.MethodArgument).*", "$($Finding.MethodArgument) = " | Out-File $TempFileName
+                } else {
+                    # Check if SID actually exists on the system
+                    $List = $Finding.RecommendedValue -split ';'| Where-Object {
+                        if($_ -like 'S-*') {
+                            try {
+                                $sid = new-object System.Security.Principal.SecurityIdentifier($_)
+                                return [bool]$_.Translate([System.Security.Principal.NTAccount])
+                            } catch {
+                                return $false
+                            }
+                        } else {
+                            return $true;
+                        }
+                     }
+
+                     # If User Right Assignment exists, replace values
+                     If ( ((Get-Content -Encoding unicode $TempFileName) | Select-String $($Finding.MethodArgument)).Count -gt 0 ) {
+                        (Get-Content -Encoding unicode $TempFileName) -replace "$($Finding.MethodArgument).*", "$($Finding.MethodArgument) = $($List -join ',')" | Out-File $TempFileName
+                     }
+                     # If it does not exist, add a new entry into the file at the right position
+                     Else {
+                        $TempFileContent = Get-Content -Encoding unicode $TempFileName
+                        $LineNumber = $TempFileContent.Count
+                        $TempFileContent[$LineNumber-3] = "$($Finding.MethodArgument) = $($List -join ',')"
+                        $TempFileContent[$LineNumber-2] = "[Version]"
+                        $TempFileContent[$LineNumber-1] = 'signature="$CHICAGO$"'
+                        $TempFileContent += "Revision=1"
+                        $TempFileContent | Set-Content -Encoding unicode $TempFileName
+                     }
+                }
+
+                &$BinarySecedit /import /cfg $TempFileName /overwrite /areas USER_RIGHTS /db $TempDbFileName /quiet | Out-Null
+
+                if($LastExitCode -ne 0) {
+                    $ResultText = "Failed to import user right assignment into temporary database" 
+                    $Message = "ID "+$Finding.ID+", "+$Finding.MethodArgument+", "+$Finding.RecommendedValue+", " + $ResultText
+                    $MessageSeverity = "High"
+                    Write-ResultEntry -Text $Message -SeverityLevel $MessageSeverity
+                    Remove-Item $TempFileName
+                    Remove-Item $TempDbFileName
+                    Continue
+                }
+
+                $ResultText = "Imported user right assignment into temporary database" 
+                $Message = "ID "+$Finding.ID+", "+$Finding.MethodArgument+", "+$Finding.RecommendedValue+", " + $ResultText
+                $MessageSeverity = "Passed"
+
+                Write-ResultEntry -Text $Message -SeverityLevel $MessageSeverity
+
+                &$BinarySecedit /configure /db $TempDbFileName /overwrite /areas USER_RIGHTS /quiet | Out-Null
+
+                if($LastExitCode -ne 0) {
+                    $ResultText = "Failed to configure system user right assignment"
+                    $Message = "ID "+$Finding.ID+", "+$Finding.MethodArgument+", "+$Finding.RecommendedValue+", " + $ResultText
+                    $MessageSeverity = "High"
+                    Write-ResultEntry -Text $Message -SeverityLevel $MessageSeverity
+                    Remove-Item $TempFileName
+                    Remove-Item $TempDbFileName
+                    Continue
+                }
+
+                $ResultText = "Configured system user right assignment"
+                $Message = "ID "+$Finding.ID+", "+$Finding.MethodArgument+", "+$Finding.RecommendedValue+", " + $ResultText
+                $MessageSeverity = "Passed"
+
+                Write-ResultEntry -Text $Message -SeverityLevel $MessageSeverity
+
+                Remove-Item $TempFileName
+                Remove-Item $TempDbFileName
+            }
+
+            #
+            # auditpol
+            # Set an audit policy
+            #
+            If ($Finding.Method -eq 'auditpol') {
+
+                If (-not($IsAdmin)) {
+                    $Message = "ID "+$Finding.ID+", "+$Finding.Name+", Method "+$Finding.Method+" requires admin priviliges. Test skipped."
+                    Write-ProtocolEntry -Text $Message -LogLevel "Error"
+                    Continue
+                }
+
+                $Success = if($Finding.RecommendedValue -ilike "*success*") {"enable"} else {"disable"}
+                $Failure = if($Finding.RecommendedValue -ilike "*failure*") {"enable"} else {"disable"}
+
+                $SubCategory = $Finding.Name
+
+                &$BinaryAuditpol /set /subcategory:"$($SubCategory)" /success:$($Success) /failure:$($Failure) | Out-Null
+
+                if($LastExitCode -eq 0) {
+                    $ResultText = "Audit policy set" 
+                    $Message = "ID "+$Finding.ID+", "+$Finding.Name+", "+$Finding.RecommendedValue+", " + $ResultText
+                    $MessageSeverity = "Passed"
+                } else {
+                    $ResultText = "Failed to set audit policy" 
+                    $Message = "ID "+$Finding.ID+", "+$Finding.Name+", "+$Finding.RecommendedValue+", " + $ResultText
+                    $MessageSeverity = "High"
+                }
+
+                Write-ResultEntry -Text $Message -SeverityLevel $MessageSeverity
+            }
+
+            #
+            # accountpolicy
+            # Set a user account policy
+            #
+            If ($Finding.Method -eq 'accountpolicy') {
+
+                If (-not($IsAdmin)) {
+                    $Message = "ID "+$Finding.ID+", "+$Finding.Name+", Method "+$Finding.Method+" requires admin priviliges. Test skipped."
+                    Write-ProtocolEntry -Text $Message -LogLevel "Error"
+                    Continue
+                }
+
+                $Sw = "";
+
+                Switch ($Finding.Name) {
+                    "Force user logoff how long after time expires" { $Sw = "FORCELOGOFF"; Break }
+                    "Minimum password age" { $Sw = "MINPWAGE"; Break }
+                    "Maximum password age" { $Sw = "MAXPWAGE"; Break }
+                    "Minimum password length" { $Sw = "MINPWLEN"; Break }
+                    "Length of password history maintained" { $Sw = "UNIQUEPW"; Break }
+                    "Account lockout threshold" { $Sw = "lockoutthreshold"; Break; }
+                    "Account lockout duration" { $Sw = "lockoutduration"; Break }
+                    "Reset account lockout counter" { $Sw = "lockoutwindow"; Break }
+                }
+
+                &$BinaryNet accounts /$($Sw):$($Finding.RecommendedValue) | Out-Null
+
+                if($LastExitCode -eq 0) {
+                    $ResultText = "Account policy set" 
+                    $Message = "ID "+$Finding.ID+", "+$Finding.Name+", "+$Finding.RecommendedValue+", " + $ResultText
+                    $MessageSeverity = "Passed"
+                } else {
+                    $ResultText = "Failed to set account policy" 
+                    $Message = "ID "+$Finding.ID+", "+$Finding.Name+", "+$Finding.RecommendedValue+", " + $ResultText
+                    $MessageSeverity = "High"
+                }
+
+                Write-ResultEntry -Text $Message -SeverityLevel $MessageSeverity
+            }
+
+            #
+            # Registry
+            # Create or modify a registry value.
+            #
+            If ($Finding.Method -eq 'Registry' -or $Finding.Method -eq 'RegistryList') {
+                
+                If (-not($IsAdmin) -and -not($Finding.RegistryPath.StartsWith("HKCU:\"))) {
+                    $Message = "ID "+$Finding.ID+", "+$Finding.Name+", Method "+$Finding.Method+" requires admin priviliges. Test skipped."
+                    Write-ProtocolEntry -Text $Message -LogLevel "Error"
+                    Continue
+                }
+
+                $RegType = "String"
+
+                #
+                # Basically this is true, but there is an exception for the finding "MitigationOptions_FontBocking",
+                # the value "10000000000" is written to the registry as a string
+                #
+                If ($Finding.RegistryItem -eq "MitigationOptions_FontBocking") {
+                    $RegType = "String"
+                } ElseIf ($Finding.RecommendedValue -match "^\d+$") {
+                    $RegType = "DWord"                    
+                }
+
+                if(!(Test-Path $Finding.RegistryPath)) {
+
+                    $Result = New-Item $Finding.RegistryPath -Force;
+                    
+                    if($Result) {
+                        $ResultText = "Registry key created" 
+                        $Message = "ID "+$Finding.ID+", "+$Finding.RegistryPath+", " + $ResultText
+                        $MessageSeverity = "Passed"
+                        Write-ResultEntry -Text $Message -SeverityLevel $MessageSeverity
+                    } else {
+                        $ResultText = "Failed to create registry key" 
+                        $Message = "ID "+$Finding.ID+", "+$Finding.RegistryPath+", " + $ResultText
+                        $MessageSeverity = "High"
+                        Write-ResultEntry -Text $Message -SeverityLevel $MessageSeverity
+                        Continue
+                    }
+                }
+
+                #
+                # The method RegistryList needs a separate handling, because the name of the registry key is dynamic, usually incremented.
+                # Therefore, it is searched whether the value already exists or not. If the value does not exist, it counts how many
+                # other values are already there in order to set the next higher value and not overwrite existing keys.
+                #
+                If ($Finding.Method -eq 'RegistryList') {
+
+                    $ResultList = Get-ItemProperty -Path $Finding.RegistryPath
+                    $ResultListCounter = 0
+                    If ($ResultList | Where-Object { $_ -like "*"+$Finding.RegistryItem+"*" }) {
+                        $ResultList.PSObject.Properties | ForEach-Object {
+                            If ( $_.Value -eq $Finding.RegistryItem ) {
+                                $Finding.RegistryItem = $_.Value.Name
+                                Continue
+                            }
+                        }
+                    }
+                    Else {
+                        $ResultList.PSObject.Properties | ForEach-Object {
+                            $ResultListCounter++
+                        }
+                    }
+                    If ($ResultListCounter -eq 0) {
+                        $Finding.RegistryItem = 1
+                    } 
+                    Else {
+                        $Finding.RegistryItem = $ResultListCounter - 4
+                    }
+                }
+
+                $Result = Set-Itemproperty -PassThru -Path $Finding.RegistryPath -Name $Finding.RegistryItem -Type $RegType -Value $Finding.RecommendedValue
+
+                if($Result) {
+                    $ResultText = "Registry value created/modified" 
+                    $Message = "ID "+$Finding.ID+", "+$Finding.RegistryPath+", "+$Finding.RegistryItem+", " + $ResultText
+                    $MessageSeverity = "Passed"
+                } else {
+                    $ResultText = "Failed to create registry value" 
+                    $Message = "ID "+$Finding.ID+", "+$Finding.RegistryPath+", "+$Finding.RegistryItem+", " + $ResultText
+                    $MessageSeverity = "High"
+                }
+
+                Write-ResultEntry -Text $Message -SeverityLevel $MessageSeverity
+            }
+
+            #
+            # Exploit protection
+            # Set exploit protection values
+            #
+            # I noticed irregularities when the process mitigations were set individually,
+            # in some cases settings that had already been set were then reset. Therefore,
+            # the settings are collected in an array and finally set at the end of the processing.
+            #
+            If ($Finding.Method -eq 'Processmitigation') {
+
+                If (-not($IsAdmin)) {
+                    $Message = "ID "+$Finding.ID+", "+$Finding.Name+", Method "+$Finding.Method+" requires admin priviliges. Test skipped."
+                    Write-ProtocolEntry -Text $Message -LogLevel "Error"
+                    Continue
+                }
+
+                $SettingArgumentArray = $Finding.MethodArgument.Split(".") 
+                $SettingArgument0 = $SettingArgumentArray[0]
+                $SettingArgument1 = $SettingArgumentArray[1]
+
+                If ( $Finding.RecommendedValue -eq "ON") {
+
+                    If ( $SettingArgumentArray[1] -eq "Enable" ) {
+                        $ProcessmitigationEnableArray += $SettingArgumentArray[0]
+                    } Else                    {
+                        $ProcessmitigationEnableArray += $SettingArgumentArray[1]
+                    }                    
+                }
+                ElseIf ( $Finding.RecommendedValue -eq "OFF") {
+
+                    If ($SettingArgumentArray[1] -eq "TelemetryOnly") {
+                        $ProcessmitigationDisableArray += "SEHOPTelemetry"
+                    }
+                    ElseIf ( $SettingArgumentArray[1] -eq "Enable" ) {
+                        $ProcessmitigationDisableArray += $SettingArgumentArray[0]
+                    }
+                    Else {
+                        $ProcessmitigationDisableArray += $SettingArgumentArray[1]
+                    }
+                }
+                $ResultText = "setting added to list" 
+                $Message = "ID "+$Finding.ID+", "+$Finding.Name+", " + $ResultText
+                $MessageSeverity = "Passed"
+                Write-ResultEntry -Text $Message -SeverityLevel $MessageSeverity
+            }
+
+            #
+            # WindowsOptionalFeature
+            # Remove a Windows feature
+            #
+            If ($Finding.Method -eq 'WindowsOptionalFeature') {
+
+                If (-not($IsAdmin)) {
+                    $Message = "ID "+$Finding.ID+", "+$Finding.Name+", Method "+$Finding.Method+" requires admin priviliges. Test skipped."
+                    Write-ProtocolEntry -Text $Message -LogLevel "Error"
+                    Continue
+                }
+
+                # Check if feature is installed and should be removed
+                If ($Finding.RecommendedValue -eq "Disabled"){
+
+                    try {
+                        $ResultOutput = Get-WindowsOptionalFeature -Online -FeatureName $Finding.MethodArgument 
+                        $Result = $ResultOutput.State
+                    } catch {
+                        $ResultText = "Could not check status"
+                        $Message = "ID "+$Finding.ID+", "+$Finding.Name+", " + $ResultText
+                        $MessageSeverity = "High"
+                        Write-ResultEntry -Text $Message -SeverityLevel $MessageSeverity
+                        Continue
+                    }
+
+                    If($Result -eq "Enabled") {
+
+                        try {
+                            $Result = Disable-WindowsOptionalFeature -Online -FeatureName $Finding.MethodArgument                             
+                        } catch {
+                            $ResultText = "Could not be removed"
+                            $Message = "ID "+$Finding.ID+", "+$Finding.Name+", " + $ResultText
+                            $MessageSeverity = "High"
+                            Write-ResultEntry -Text $Message -SeverityLevel $MessageSeverity
+                            Continue
+                        }
+
+                        $ResultText = "Feature removed" 
+                        $Message = "ID "+$Finding.ID+", "+$Finding.Name+", " + $ResultText
+                        $MessageSeverity = "Passed"
+                    }
+                    Else {
+                        $ResultText = "Feature is not installed" 
+                        $Message = "ID "+$Finding.ID+", "+$Finding.Name+", " + $ResultText
+                        $MessageSeverity = "Passed"
+                    }
+
+                    Write-ResultEntry -Text $Message -SeverityLevel $MessageSeverity
+
+                    If ($Log) {
+                        Add-ProtocolEntry -Text $Message
+                    }
+                    
+                    If ($Report) {
+                        $Message = '"'+$Finding.ID+'","'+$Finding.Name+'","'+$ResultText+'"'
+                        Add-ResultEntry -Text $Message
+                    }
+                }
+            }
+
+            #
+            # FirewallRule
+            # Create a firewall rule. First it will be checked if the rule already exists
+            #
+            If ($Finding.Method -eq 'FirewallRule') {
+
+                If (-not($IsAdmin)) {
+                    $Message = "ID "+$Finding.ID+", "+$Finding.Name+", Method "+$Finding.Method+" requires admin priviliges. Test skipped."
+                    Write-ProtocolEntry -Text $Message -LogLevel "Error"
+                    Continue
+                }
+
+                $FwRule = $Finding.MethodArgument
+                $FwRuleArray = $FwRule.Split("|")
+
+                $FwDisplayName = $Finding.Name 
+                $FwProfile = $FwRuleArray[0]
+                $FwDirection = $FwRuleArray[1]
+                $FwAction = $FwRuleArray[2]
+                $FwProtocol = $FwRuleArray[3]
+                $FwLocalPort = @($FwRuleArray[4]).Split(",")
+                $FwProgram = $FwRuleArray[5]
+
+                # Check if rule already exists
+                try {
+
+                    $ResultOutput = Get-NetFirewallRule -DisplayName $FwDisplayName 2> $null
+                    $Result = $ResultOutput.Enabled
+
+                } catch {
+                    $Result = $Finding.DefaultValue
+                }
+
+                # Go on if rule not exists
+                If (-Not $Result) {
+
+                    If ($FwProgram -eq "") {
+
+                        $ResultRule = New-NetFirewallRule -DisplayName $FwDisplayName -Profile $FwProfile -Direction $FwDirection -Action $FwAction -Protocol $FwProtocol -LocalPort $FwLocalPort
+                    }
+                    Else {
+                        $ResultRule = New-NetFirewallRule -DisplayName $FwDisplayName -Profile $FwProfile -Direction $FwDirection -Action $FwAction -Program "$FwProgram"
+                    }
+
+                    If ($ResultRule.PrimaryStatus -eq "OK") {
+
+                        # Excellent
+                        $ResultText = "Rule created" 
+                        $Message = "ID "+$Finding.ID+", "+$Finding.Name+", " + $ResultText
+                        $MessageSeverity = "Passed"
+                    } 
+                    Else {
+                        # Bogus
+                        $ResultText = "Rule not created" 
+                        $Message = "ID "+$Finding.ID+", "+$Finding.Name+", " + $ResultText
+                        $MessageSeverity = "High"
+                    }
+                }
+                Else {
+                    # Excellent
+                    $ResultText = "Rule already exists" 
+                    $Message = "ID "+$Finding.ID+", "+$Finding.Name+", " + $ResultText
+                    $MessageSeverity = "Passed"
+                }
+
+                Write-ResultEntry -Text $Message -SeverityLevel $MessageSeverity
+
+                If ($Log) {
+                    Add-ProtocolEntry -Text $Message
+                }
+                    
+                If ($Report) {
+                    $Message = '"'+$Finding.ID+'","'+$Finding.Name+'","'+$ResultText+'"'
+                    Add-ResultEntry -Text $Message
+                }
+            }
+        }
+        
+        #
+        # After all items of the checklist have been run through, the process mitigation settings can now be set... 
+        #
+        If ( $ProcessmitigationEnableArray.Count -gt 0 -and $ProcessmitigationDisableArray.Count -gt 0) {
+
+            $ResultText = "Process mitigation settings set"
+            $MessageSeverity = "Passed"  
+
+            try {
+              $Result = Set-Processmitigation -System -Enable $ProcessmitigationEnableArray -Disable $ProcessmitigationDisableArray 
+            }
+            catch {
+                $ResultText = "Failed to set process mitigation settings"
+                $MessageSeverity = "High"
+            }
+
+            $Message = "Starting Category Microsoft Defender Exploit Guard"
+            Write-Output "`n"                
+            Write-ProtocolEntry -Text $Message -LogLevel "Info"                  
+            
+            $Message = $ResultText
+            Write-ResultEntry -Text $Message -SeverityLevel $MessageSeverity
+        }
+        ElseIf ($ProcessmitigationEnableArray.Count -gt 0 -and $ProcessmitigationDisableArray.Count -eq 0) {
+            $ResultText = "Process mitigation settings set"
+            $MessageSeverity = "Passed"  
+
+            try {
+              $Result = Set-Processmitigation -System -Enable $ProcessmitigationEnableArray 
+            }
+            catch {
+                $ResultText = "Failed to set process mitigation settings"
+                $MessageSeverity = "High"
+            }
+
+            $Message = "Starting Category Microsoft Defender Exploit Guard"
+            Write-Output "`n"                
+            Write-ProtocolEntry -Text $Message -LogLevel "Info"
+           
+            $Message = $ResultText
+            Write-ResultEntry -Text $Message -SeverityLevel $MessageSeverity
+        }
+        ElseIf ($ProcessmitigationEnableArray.Count -eq 0 -and $ProcessmitigationDisableArray.Count -gt 0) {
+            $ResultText = "Process mitigation settings set"
+            $MessageSeverity = "Passed"  
+
+            try {
+              $Result = Set-Processmitigation -System -Disable $ProcessmitigationDisableArray 
+            }
+            catch {
+                $ResultText = "Failed to set process mitigation settings"
+                $MessageSeverity = "High"
+            }
+
+            $Message = "Starting Category Microsoft Defender Exploit Guard"
+            Write-Output "`n"                
+            Write-ProtocolEntry -Text $Message -LogLevel "Info"    
+          
+            $Message = $ResultText
+            Write-ResultEntry -Text $Message -SeverityLevel $MessageSeverity
+        }
     }
     
     Write-Output "`n"
     Write-ProtocolEntry -Text "HardeningKitty is done" -LogLevel "Info"
+    If ($Mode -eq "Audit") {
+
+        # HardeningKitty Score
+        $StatsTotal = $StatsPassed + $StatsLow + $StatsMedium + $StatsHigh
+        $ScoreTotal = $StatsTotal * 4
+        $ScoreAchived = $StatsPassed * 4 + $StatsLow * 2 + $StatsMedium
+        $HardeningKittyScore = ([int] $ScoreAchived / [int] $ScoreTotal) * 5 + 1
+        $HardeningKittyScoreRounded = [math]::round($HardeningKittyScore,2)
+
+        # Overwrite HardeningKitty Score if no finding is passed
+        If ($StatsPassed -eq 0 ) {
+            $HardeningKittyScoreRounded = 1.00
+        }
+            
+        Write-ProtocolEntry -Text "Your HardeningKitty score is: $HardeningKittyScoreRounded. HardeningKitty Statistics: Total checks: $StatsTotal - Passed: $StatsPassed, Low: $StatsLow, Medium: $StatsMedium, High: $StatsHigh." -LogLevel "Info"
+    }
     Write-Output "`n"
 }

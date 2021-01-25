@@ -3,9 +3,9 @@ ID,Category,Name,Method,MethodArgument,RegistryPath,RegistryItem,ClassName,Names
 1.1.2,"Account Policies","Maximum password age",accountpolicy,,,,,,,,60,<=,Low
 1.1.3,"Account Policies","Minimum password age",accountpolicy,,,,,,,,1,>=,Low
 1.1.4,"Account Policies","Minimum password length",accountpolicy,,,,,,,,14,>=,Medium
-1.1.5,"Account Policies","Password must meet complexity requirements",secedit,Complexity,,,,,,0,1,=,Medium
+1.1.5,"Account Policies","Password must meet complexity requirements",secedit,"System Access\PasswordComplexity",,,,,,0,1,=,Medium
 1.1.6,"Account Policies","Relax minimum password length limits",Registry,,HKLM:\System\CurrentControlSet\Control\SAM,RelaxMinimumPasswordLengthLimits,,,,0,1,=,Medium
-1.1.7,"Account Policies","Store passwords using reversible encryption",secedit,ClearTextPassword,,,,,,0,0,=,High
+1.1.7,"Account Policies","Store passwords using reversible encryption",secedit,"System Access\ClearTextPassword",,,,,,0,0,=,High
 1.2.1,"Account Policies","Account lockout duration",accountpolicy,,,,,,,,15,>=,Low
 1.2.2,"Account Policies","Account lockout threshold",accountpolicy,,,,,,,0,10,<=,Low
 1.2.3,"Account Policies","Reset account lockout counter",accountpolicy,,,,,,,,15,>=,Low
@@ -84,7 +84,7 @@ ID,Category,Name,Method,MethodArgument,RegistryPath,RegistryItem,ClassName,Names
 2.3.9.3,"Security Options","Microsoft network server: Digitally sign communications (if client agrees)",Registry,,HKLM:\System\CurrentControlSet\Services\LanManServer\Parameters,EnableSecuritySignature,,,,0,1,=,Medium
 2.3.9.4,"Security Options","Microsoft network server: Disconnect clients when logon hours expire",Registry,,HKLM:\System\CurrentControlSet\Services\LanManServer\Parameters,enableforcedlogoff,,,,1,1,=,Medium
 2.3.9.5,"Security Options","Microsoft network server: Server SPN target name validation level",Registry,,HKLM:\System\CurrentControlSet\Services\LanManServer\Parameters,SMBServerNameHardeningLevel,,,,,1,>=,Medium
-2.3.10.1,"Security Options","Network access: Allow anonymous SID/Name translation",secedit,LSAAnonymousNameLookup,,,,,,0,0,=,Medium
+2.3.10.1,"Security Options","Network access: Allow anonymous SID/Name translation",secedit,"System Access\LSAAnonymousNameLookup",,,,,,0,0,=,Medium
 2.3.10.2,"Security Options","Network access: Do not allow anonymous enumeration of SAM accounts",Registry,,HKLM:\System\CurrentControlSet\Control\Lsa,RestrictAnonymousSAM,,,,1,1,=,Medium
 2.3.10.3,"Security Options","Network access: Do not allow anonymous enumeration of SAM accounts and shares",Registry,,HKLM:\System\CurrentControlSet\Control\Lsa,RestrictAnonymous,,,,0,1,=,Medium
 2.3.10.4,"Security Options","Network access: Do not allow storage of passwords and credentials for network authentication",Registry,,HKLM:\System\CurrentControlSet\Control\Lsa,DisableDomainCreds,,,,0,1,=,Medium
@@ -101,7 +101,7 @@ ID,Category,Name,Method,MethodArgument,RegistryPath,RegistryItem,ClassName,Names
 2.3.11.3,"Security Options","Network Security: Allow PKU2U authentication requests to this computer to use online identities",Registry,,HKLM:\System\CurrentControlSet\Control\Lsa\pku2u,AllowOnlineID,,,,,0,=,Medium
 2.3.11.4,"Security Options","Network Security: Network security: Configure encryption types allowed for Kerberos",Registry,,HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System\Kerberos\Parameters,SupportedEncryptionTypes,,,,,2147483640,<=,Medium
 2.3.11.5,"Security Options","Network security: Do not store LAN Manager hash value on next password change",Registry,,HKLM:\System\CurrentControlSet\Control\Lsa,NoLMHash,,,,1,1,=,High
-2.3.11.6,"Security Options","Network security: Force logoff when logon hours expires",accountpolicy,,,,,,,Never,Enabled,=,Low
+2.3.11.6,"Security Options","Network security: Force logoff when logon hours expires",secedit,"System Access\ForceLogoffWhenHourExpire",,,,,,0,1,=,Low
 2.3.11.7,"Security Options","Network security: LAN Manager authentication level",Registry,,HKLM:\System\CurrentControlSet\Control\Lsa,LmCompatibilityLevel,,,,3,5,=,Medium
 2.3.11.8,"Security Options","Network security: LDAP client signing requirements",Registry,,HKLM:\System\CurrentControlSet\Services\LDAP,LDAPClientIntegrity,,,,1,1,>=,Medium
 2.3.11.9,"Security Options","Network security: Minimum session security for NTLM SSP based (including secure RPC) clients",Registry,,HKLM:\System\CurrentControlSet\Control\Lsa\MSV1_0,NTLMMinClientSec,,,,536870912,537395200,=,Medium
@@ -208,7 +208,7 @@ ID,Category,Name,Method,MethodArgument,RegistryPath,RegistryItem,ClassName,Names
 9.1.1,"Windows Firewall","EnableFirewall (Domain Profile, Policy)",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\DomainProfile,EnableFirewall,,,,0,1,=,Medium
 9.1.2,"Windows Firewall","Inbound Connections (Domain Profile, Policy)",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\DomainProfile,DefaultInboundAction,,,,1,1,=,Medium
 9.1.3,"Windows Firewall","Outbound Connections (Domain Profile, Policy)",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\DomainProfile,DefaultOutboundAction,,,,0,0,=,Medium
-9.1.4,"Windows Firewall","Display a notification (Domain Profile, Policy)",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\DomainProfile,DisableNotifications,,,,0,0,=,Low
+9.1.4,"Windows Firewall","Display a notification (Domain Profile, Policy)",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\DomainProfile,DisableNotifications,,,,0,1,=,Low
 9.1.5,"Windows Firewall","Name of log file (Domain Profile, Policy)",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\DomainProfile\Logging,LogFilePath,,,,%SystemRoot%\System32\logfiles\firewall\pfirewall.log,%SystemRoot%\System32\logfiles\firewall\domainfw.log,=,Low
 9.1.6,"Windows Firewall","Log size limit (Domain Profile, Policy)",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\DomainProfile\Logging,LogFileSize,,,,4096,16384,>=,Medium
 9.1.7,"Windows Firewall","Log dropped packets (Domain Profile, Policy)",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\DomainProfile\Logging,LogDroppedPackets,,,,0,1,=,Medium
@@ -216,7 +216,7 @@ ID,Category,Name,Method,MethodArgument,RegistryPath,RegistryItem,ClassName,Names
 9.2.1,"Windows Firewall","EnableFirewall (Private Profile, Policy)",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\PrivateProfile,EnableFirewall,,,,0,1,=,Medium
 9.2.2,"Windows Firewall","Inbound Connections (Private Profile, Policy)",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\PrivateProfile,DefaultInboundAction,,,,1,1,=,Medium
 9.2.3,"Windows Firewall","Outbound Connections (Private Profile, Policy)",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\PrivateProfile,DefaultOutboundAction,,,,0,0,=,Medium
-9.2.4,"Windows Firewall","Display a notification (Private Profile, Policy)",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\PrivateProfile,DisableNotifications,,,,0,0,=,Low
+9.2.4,"Windows Firewall","Display a notification (Private Profile, Policy)",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\PrivateProfile,DisableNotifications,,,,0,1,=,Low
 9.2.5,"Windows Firewall","Name of log file (Private Profile, Policy)",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\PrivateProfile\Logging,LogFilePath,,,,%SystemRoot%\System32\logfiles\firewall\pfirewall.log,%SystemRoot%\System32\logfiles\firewall\privatefw.log,=,Low
 9.2.6,"Windows Firewall","Log size limit (Private Profile, Policy)",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\PrivateProfile\Logging,LogFileSize,,,,4096,16384,>=,Medium
 9.2.7,"Windows Firewall","Log dropped packets (Private Profile, Policy)",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\PrivateProfile\Logging,LogDroppedPackets,,,,0,1,=,Medium
@@ -224,7 +224,7 @@ ID,Category,Name,Method,MethodArgument,RegistryPath,RegistryItem,ClassName,Names
 9.3.1,"Windows Firewall","EnableFirewall (Public Profile, Policy)",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\PublicProfile,EnableFirewall,,,,0,1,=,Medium
 9.3.2,"Windows Firewall","Inbound Connections (Public Profile, Policy)",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\PublicProfile,DefaultInboundAction,,,,1,1,=,Medium
 9.3.3,"Windows Firewall","Outbound Connections (Private Profile, Policy)",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\PrivateProfile,DefaultOutboundAction,,,,0,0,=,Medium
-9.3.4,"Windows Firewall","Display a notification (Public Profile, Policy)",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\PublicProfile,DisableNotifications,,,,0,0,=,Low
+9.3.4,"Windows Firewall","Display a notification (Public Profile, Policy)",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\PublicProfile,DisableNotifications,,,,0,1,=,Low
 9.3.5,"Windows Firewall","Apply local firewall rules (Public Profile, Policy)",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\PublicProfile,AllowLocalPolicyMerge,,,,0,0,=,Low
 9.3.6,"Windows Firewall","Apply local connection security rules (Public Profile, Policy)",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\PublicProfile,AllowLocalIPsecPolicyMerge,,,,0,0,=,Low
 9.3.7,"Windows Firewall","Name of log file (Public Profile, Policy)",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\PublicProfile\Logging,LogFilePath,,,,%SystemRoot%\System32\logfiles\firewall\pfirewall.log,%SystemRoot%\System32\logfiles\firewall\publicfw.log,=,Low
@@ -459,7 +459,7 @@ ID,Category,Name,Method,MethodArgument,RegistryPath,RegistryItem,ClassName,Names
 18.9.26.2.2,"Administrative Templates: Windows Components","Event Log Service: Specify the maximum Security log file size (KB)",Registry,,HKLM:\Software\Policies\Microsoft\Windows\EventLog\Security,MaxSize,,,,4096,196608,>=,Medium
 18.9.26.3.1,"Administrative Templates: Windows Components","Event Log Service: Setup: Control Event Log behavior when the log file reaches its maximum size",Registry,,HKLM:\Software\Policies\Microsoft\Windows\EventLog\Setup,Retention,,,,,0,=,Medium
 18.9.26.3.2,"Administrative Templates: Windows Components","Event Log Service: Setup: Specify the maximum log file size (KB)",Registry,,HKLM:\Software\Policies\Microsoft\Windows\EventLog\Setup,MaxSize,,,,4096,32768,>=,Medium
-18.9.26.4.1,"Administrative Templates: Windows Components","Event Log Service: Setup: Specify the maximum log file size (KB)",Registry,,HKLM:\Software\Policies\Microsoft\Windows\EventLog\Setup,MaxSize,,,,4096,0,=,Medium
+18.9.26.4.1,"Administrative Templates: Windows Components","Event Log Service: System: Control Event Log behavior when the log file reaches its maximum size",Registry,,HKLM:\Software\Policies\Microsoft\Windows\EventLog\System,Retention,,,,,0,=,Medium
 18.9.26.4.2,"Administrative Templates: Windows Components","Event Log Service: Specify the maximum System log file size (KB)",Registry,,HKLM:\Software\Policies\Microsoft\Windows\EventLog\System,MaxSize,,,,4096,32768,>=,Medium
 18.9.30.2,"Administrative Templates: Windows Components","File Explorer: Turn off Data Execution Prevention for Explorer",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer,NoDataExecutionPrevention,,,,,0,=,Medium
 18.9.30.3,"Administrative Templates: Windows Components","File Explorer: Turn off heap termination on corruption",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer,NoHeapTerminationOnCorruption,,,,,0,=,Medium
@@ -469,7 +469,7 @@ ID,Category,Name,Method,MethodArgument,RegistryPath,RegistryItem,ClassName,Names
 18.9.43.1,"Administrative Templates: Windows Components","Messaging: Allow Message Service Cloud Sync",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\Windows\Messaging,AllowMessageSync,,,,1,0,=,Medium
 18.9.44.1,"Administrative Templates: Windows Components","Microsoft account: Block all consumer Microsoft account user authentication",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\MicrosoftAccount,DisableUserAuth,,,,,1,=,Medium
 18.9.45.3.1,"Microsoft Defender Antivirus","MAPS: Configure local setting override for reporting to Microsoft MAPS",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsDefender\Spynet,LocalSettingOverrideSpynetReporting,,,,,0,=,Medium
-18.9.45.3.2,"Microsoft Defender Antivirus","MAPS: Join Microsoft MAPS",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsDefender\Spynet,SpynetReporting,,,,,0,=,Medium
+18.9.45.3.2,"Microsoft Defender Antivirus","MAPS: Join Microsoft MAPS",Registry,,"HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Spynet",SpynetReporting,,,,,0,=,Medium
 18.9.45.4.1.1,"Microsoft Defender Exploit Guard","Attack Surface Reduction rules",Registry,,"HKLM:\Software\Policies\Microsoft\Windows Defender\Windows Defender Exploit Guard\ASR",ExploitGuard_ASR_Rules,,,,0,1,=,Medium
 18.9.45.4.1.2.1.1,"Microsoft Defender Exploit Guard","ASR: Block Office applications from creating child processes (Policy)",Registry,,"HKLM:\Software\Policies\Microsoft\Windows Defender\Windows Defender Exploit Guard\ASR\rules",d4f940ab-401b-4efc-aadc-ad5f3c50688a,,,,0,1,=,Medium
 18.9.45.4.1.2.1.2,"Microsoft Defender Exploit Guard","ASR: Block Office applications from creating child processes",MpPreferenceAsr,d4f940ab-401b-4efc-aadc-ad5f3c50688a,,,,,,0,1,=,Medium
@@ -493,7 +493,7 @@ ID,Category,Name,Method,MethodArgument,RegistryPath,RegistryItem,ClassName,Names
 18.9.45.4.1.2.10.2,"Microsoft Defender Exploit Guard","ASR: Impede JavaScript and VBScript to launch executables",MpPreferenceAsr,d3e037e1-3eb8-44c8-a917-57927947596d,,,,,,0,1,=,Medium
 18.9.45.4.1.2.11.1,"Microsoft Defender Exploit Guard","ASR: Block Office communication applications from creating child processes (Policy)",Registry,,"HKLM:\Software\Policies\Microsoft\Windows Defender\Windows Defender Exploit Guard\ASR\rules",26190899-1602-49e8-8b27-eb1d0a1ce869,,,,0,1,=,Medium
 18.9.45.4.1.2.11.2,"Microsoft Defender Exploit Guard","ASR: Block Office communication applications from creating child processes",MpPreferenceAsr,26190899-1602-49e8-8b27-eb1d0a1ce869,,,,,,0,1,=,Medium
-18.9.45.4.3.1,"Microsoft Defender Exploit Guard","Network Protection: Prevent users and apps from accessing dangerous websites",Registry,,"HKLM:\SOFTWARE\Policies\Microsoft\Microsoft Defender\Microsoft Defender Exploit Guard\Network Protection",EnableNetworkProtection,,,,,1,=,Medium
+18.9.45.4.3.1,"Microsoft Defender Exploit Guard","Network Protection: Prevent users and apps from accessing dangerous websites",Registry,,"HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Windows Defender Exploit Guard\Network Protection",EnableNetworkProtection,,,,,1,=,Medium
 18.9.45.5.1,"Microsoft Defender Antivirus","MpEngine: Enable file hash computation feature",Registry,,"HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\MpEngine",FileHashComputation,,,,,1,=,Medium
 18.9.45.8.1,"Microsoft Defender Antivirus","Real-time Protection: Turn on behavior monitoring (Policy)",Registry,,"HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection",DisableBehaviorMonitoring,,,,,0,=,Medium
 18.9.45.10.1,"Microsoft Defender Antivirus","Reporting: Configure Watson events",Registry,,"HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Reporting",DisableGenericRePorts,,,,,1,=,Medium

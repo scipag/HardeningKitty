@@ -111,7 +111,7 @@
         # Define path to accessak binary
         [ValidateScript({Test-Path $_})]
         [String]
-        $BinaryAccesschk
+        $BinaryAccesschk = "C:\tmp\accesschk64.exe"
     )
 
     Function Write-ProtocolEntry {
@@ -244,6 +244,133 @@
         }
     }
 
+    Function Get-IniContent ($filePath) {
+
+        <#
+        .SYNOPSIS
+
+            Read a .ini file into a tree of hashtables
+
+        .NOTES
+
+            Original source see https://devblogs.microsoft.com/scripting/use-powershell-to-work-with-any-ini-file/
+        #>
+
+        $ini = @{}
+        switch -regex -file $FilePath
+        {
+            “^\[(.+)\]” { # Section
+                $section = $matches[1]
+                $ini[$section] = @{}
+                $CommentCount = 0
+            }
+            “^(;.*)$” { # Comment
+                $value = $matches[1]
+                $CommentCount = $CommentCount + 1
+                $name = “Comment” + $CommentCount
+                $ini[$section][$name] = $value
+            }
+            “(.+?)\s*=(.*)” { # Key
+                $name,$value = $matches[1..2]
+                $ini[$section][$name] = $value
+            }
+        }
+
+        return $ini
+    }
+
+    Function Out-IniFile($InputObject, $FilePath, $Encoding) {
+        <#
+            .SYNOPSIS
+                Write a hashtable out to a .ini file
+
+            .NOTES
+                Original source see https://devblogs.microsoft.com/scripting/use-powershell-to-work-with-any-ini-file/
+        #>
+
+        $outFile = New-Item -Force -ItemType file -Path $Filepath
+
+        foreach ($i in $InputObject.keys) {
+            if (!($($InputObject[$i].GetType().Name) -eq "Hashtable")) {
+                #No Sections
+                Add-Content -Encoding $Encoding -Path $outFile -Value "$i=$($InputObject[$i])"
+            } else {
+                #Sections
+                Add-Content -Encoding $Encoding -Path $outFile -Value "[$i]"
+                Foreach ($j in ($InputObject[$i].keys | Sort-Object)) {
+                    if ($j -match "^Comment[\d]+") {
+                        Add-Content -Encoding $Encoding -Path $outFile -Value "$($InputObject[$i][$j])"
+                    } else {
+                        Add-Content -Encoding $Encoding -Path $outFile -Value "$j=$($InputObject[$i][$j])"
+                    }
+                }
+                Add-Content -Encoding $Encoding -Path $outFile -Value ""
+            }
+        }
+    }    
+
+    Function Get-HashtableValueDeep
+    {
+        <#
+            .SYNOPSIS
+                Get a value from a tree of hashtables
+        #>
+
+        [CmdletBinding()]
+        Param (
+            [Hashtable] $Table,
+            [String] $Path
+        )
+
+        $Key = $Path.Split('\', 2)
+
+        $Entry = $Table[$Key[0]]
+
+        if($Entry -is [hashtable] -and $Key.Length -eq 1) {
+            throw "Path is incomplete (expected a leaf but still on a branch)"
+        }
+
+        if($Entry -is [hashtable]) {
+            return Get-HashtableValueDeep $Entry $Key[1];
+        } else {
+            if($Key.Length -eq 1) {
+                return $Entry
+            } else {
+                throw "Path is too long (expected a branch but arrived at a leaf before the end of the path)"
+            }
+        }
+    }
+
+    Function Set-HashtableValueDeep {
+        <#
+            .SYNOPSIS
+                Set a value in a tree of hashtables
+        #>
+
+        [CmdletBinding()]
+        Param (
+            [Hashtable] $Table,
+            [String] $Path,
+            [String] $Value
+        )
+
+        $Key = $Path.Split('\', 2)
+
+        $Entry = $Table[$Key[0]]
+
+        if($Key.Length -eq 2) {
+            if($Entry -eq $null) {
+                $Table[$Key[0]] = @{}
+            } elseif($Entry -isnot [hashtable]) {
+                throw "Not hashtable"
+            }
+
+            return Set-HashtableValueDeep $Table[$Key[0]] $Key[1] $Value;
+        } elseif($Key.Length -eq 1) {
+            $Table[$Key[0]] = $Value;
+        }
+    }    
+
     #
     # Start Main
     #
@@ -287,9 +414,6 @@
     # Definition and check for tools
     # If a tool is not available, the execution of the script is terminated
     #
-    If (-Not $BinaryAccesschk) {
-        $BinaryAccesschk = "C:\tmp\accesschk64.exe"
-    }    
     If (-Not (Test-Path $BinaryAccesschk)) {
         Write-ProtocolEntry -Text "Binary for AccessChk not found" -LogLevel "Error"
         Break
@@ -408,6 +532,44 @@
                 } Else {
                     $Result = $Finding.DefaultValue
                 }
+            }
+
+            #
+            # Get secedit policy
+            # Secedit configures and analyzes system security, results are written
+            # to a file, which means HardeningKitty must create a temporary file
+            # and afterwards delete it. HardeningKitty is very orderly.            
+            #
+            ElseIf ($Finding.Method -eq 'secedit') {
+
+                If (-not($IsAdmin)) {
+                    $Message = "ID "+$Finding.ID+", "+$Finding.Name+", Method "+$Finding.Method+" requires admin priviliges. Test skipped."
+                    Write-ProtocolEntry -Text $Message -LogLevel "Error"
+                    Continue
+                }
+
+                $TempFileName = [System.IO.Path]::GetTempFileName()
+
+                $Area = "";
+
+                Switch($Finding.Category) {
+                    "Account Policies" { $Area = "SECURITYPOLICY"; Break }
+                    "Security Options" { $Area = "SECURITYPOLICY"; Break }
+                }
+
+                &$BinarySecedit /export /cfg $TempFileName /areas $Area | Out-Null
+
+                $Data = Get-IniContent $TempFileName
+
+                $Value = Get-HashtableValueDeep $Data $Finding.MethodArgument
+
+                if($Value -eq $null) {
+                    $Result = $null
+                } else {
+                    $Result = $Value -as [int]
+                }
+
+                Remove-Item $TempFileName
             }
 
             #
@@ -686,6 +848,7 @@
                     $ResultOutput = Get-MpPreference
                     $ResultAsrIds = $ResultOutput.AttackSurfaceReductionRules_Ids
                     $ResultAsrActions = $ResultOutput.AttackSurfaceReductionRules_Actions
+                    $Result = $Finding.DefaultValue
                     $Counter = 0
 
                     ForEach ($AsrRule in $ResultAsrIds) {
@@ -867,9 +1030,17 @@
             }
         }
 
-    } Elseif ($Mode = "HailMary") {
+    }
 
-        # A CSV finding list is imported. HardeningKitty has one machine and one user list.
+    #
+    # Start HailMary mode
+    # HardeningKitty configures all settings in a finding list file.
+    # Even though HardeningKitty works very carefully, please only
+    # use HailyMary if you know what you are doing.
+    #
+    Elseif ($Mode = "HailMary") {
+
+        # A CSV finding list is imported
         If ($FileFindingList.Length -eq 0) {
 
             $CurrentLication = Get-Location
@@ -882,10 +1053,6 @@
         $ProcessmitigationDisableArray = @()
 
         ForEach ($Finding in $FindingList) {
-
-            # Todo
-            # Set all hardening settings in findings file
-            # You can do that as long as you know you're doing
 
             #
             # Category
@@ -989,6 +1156,75 @@
             }
 
             #
+            # secedit
+            # Set a security policy
+            #
+            If ($Finding.Method -eq 'secedit') {
+                If (-not($IsAdmin)) {
+                    $Message = "ID "+$Finding.ID+", "+$Finding.Name+", Method "+$Finding.Method+" requires admin priviliges. Test skipped."
+                    Write-ProtocolEntry -Text $Message -LogLevel "Error"
+                    Continue
+                }
+
+                $Area = "";
+
+                Switch($Finding.Category) {
+                    "Account Policies" { $Area = "SECURITYPOLICY"; Break }
+                    "Security Options" { $Area = "SECURITYPOLICY"; Break }
+                }
+
+                $TempFileName = [System.IO.Path]::GetTempFileName()
+                $TempDbFileName = [System.IO.Path]::GetTempFileName()
+
+                &$BinarySecedit /export /cfg $TempFileName /areas $Area | Out-Null
+
+                $Data = Get-IniContent $TempFileName
+
+                Set-HashtableValueDeep $Data $Finding.MethodArgument $Finding.RecommendedValue
+
+                Out-IniFile $Data $TempFileName unicode $true
+
+                &$BinarySecedit /import /cfg $TempFileName /overwrite /areas $Area /db $TempDbFileName /quiet | Out-Null
+
+                if($LastExitCode -ne 0) {
+                    $ResultText = "Failed to import security policy into temporary database"
+                    $Message = "ID "+$Finding.ID+", "+$Finding.MethodArgument+", "+$Finding.RecommendedValue+", " + $ResultText
+                    $MessageSeverity = "High"
+                    Write-ResultEntry -Text $Message -SeverityLevel $MessageSeverity
+                    Remove-Item $TempFileName
+                    Remove-Item $TempDbFileName
+                    Continue
+                }
+
+                $ResultText = "Imported security policy into temporary database"
+                $Message = "ID "+$Finding.ID+", "+$Finding.MethodArgument+", "+$Finding.RecommendedValue+", " + $ResultText
+                $MessageSeverity = "Passed"
+
+                Write-ResultEntry -Text $Message -SeverityLevel $MessageSeverity
+
+                &$BinarySecedit /configure /db $TempDbFileName /overwrite /areas SECURITYPOLICY /quiet | Out-Null
+
+                if($LastExitCode -ne 0) {
+                    $ResultText = "Failed to configure security policy"
+                    $Message = "ID "+$Finding.ID+", "+$Finding.MethodArgument+", "+$Finding.RecommendedValue+", " + $ResultText
+                    $MessageSeverity = "High"
+                    Write-ResultEntry -Text $Message -SeverityLevel $MessageSeverity
+                    Remove-Item $TempFileName
+                    Remove-Item $TempDbFileName
+                    Continue
+                }
+
+                $ResultText = "Configured security policy"
+                $Message = "ID "+$Finding.ID+", "+$Finding.MethodArgument+", "+$Finding.RecommendedValue+", " + $ResultText
+                $MessageSeverity = "Passed"
+
+                Write-ResultEntry -Text $Message -SeverityLevel $MessageSeverity
+
+                Remove-Item $TempFileName
+                Remove-Item $TempDbFileName
+            }
+
+            #
             # auditpol
             # Set an audit policy
             #
@@ -1035,17 +1271,17 @@
                 $Sw = "";
 
                 Switch ($Finding.Name) {
-                    "Force user logoff how long after time expires" { $Sw = "FORCELOGOFF"; Break }
-                    "Minimum password age" { $Sw = "MINPWAGE"; Break }
-                    "Maximum password age" { $Sw = "MAXPWAGE"; Break }
-                    "Minimum password length" { $Sw = "MINPWLEN"; Break }
-                    "Length of password history maintained" { $Sw = "UNIQUEPW"; Break }
-                    "Account lockout threshold" { $Sw = "lockoutthreshold"; Break; }
-                    "Account lockout duration" { $Sw = "lockoutduration"; Break }
-                    "Reset account lockout counter" { $Sw = "lockoutwindow"; Break }
+                    "Force user logoff how long after time expires" { $Sw = "/FORCELOGOFF:$($Finding.RecommendedValue)"; Break }
+                    "Minimum password age" { $Sw = "/MINPWAGE:$($Finding.RecommendedValue)"; Break }
+                    "Maximum password age" { $Sw = "/MAXPWAGE:$($Finding.RecommendedValue)"; Break }
+                    "Minimum password length" { $Sw = "/MINPWLEN:$($Finding.RecommendedValue)"; Break }
+                    "Length of password history maintained" { $Sw = "/UNIQUEPW:$($Finding.RecommendedValue)"; Break }
+                    "Account lockout threshold" { $Sw = "/lockoutthreshold:$($Finding.RecommendedValue)"; Break; }
+                    "Account lockout duration" { $Sw = @("/lockoutwindow:$($Finding.RecommendedValue)", "/lockoutduration:$($Finding.RecommendedValue)"); Break }
+                    "Reset account lockout counter" { $Sw = "/lockoutwindow:$($Finding.RecommendedValue)"; Break }
                 }
 
-                &$BinaryNet accounts /$($Sw):$($Finding.RecommendedValue) | Out-Null
+                &$BinaryNet accounts $Sw | Out-Null
 
                 if($LastExitCode -eq 0) {
                     $ResultText = "Account policy set" 

@@ -87,6 +87,7 @@ HardeningKitty can be used to audit systems against the following baselines / be
 | CIS Microsoft Windows Server 2019 (Machine) | 1809 | 1.1.0 |
 | CIS Microsoft Windows Server 2019 (User) | 1809 | 1.1.0 |
 | Microsoft Security baseline for Microsoft Edge | 87 | Final |
+| Microsoft Security baseline for Microsoft Edge | 88, 89 | Final |
 | Microsoft Security baseline for Windows 10 version 2004 | 2004 | Final |
 | Microsoft Security baseline for Windows 10 version 2009 | 2009 | Final |
 | Microsoft Security baseline for Windows Server version 2004 (DC) | 2004 | Final |

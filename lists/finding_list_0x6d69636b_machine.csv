@@ -1,12 +1,13 @@
 ID,Category,Name,Method,MethodArgument,RegistryPath,RegistryItem,ClassName,Namespace,Property,DefaultValue,RecommendedValue,Operator,Severity
-1000,Features,"SMBv1 Support",WindowsOptionalFeature,smb1protocol,,,,,,Enabled,Disabled,=,High
-1100,"Account Policies","Account lockout threshold",accountpolicy,,,,,,,0,10,<=,Low
-1101,"Account Policies","Account lockout duration",accountpolicy,,,,,,,,15,>=,Low
-1102,"Account Policies","Reset account lockout counter",accountpolicy,,,,,,,,15,>=,Low
-1200,"User Rights Assignment","Access this computer from the network",accesschk,SeNetworkLogonRight,,,,,,"BUILTIN\Administrators;BUILTIN\Backup Operators;BUILTIN\Users;Everyone",BUILTIN\Administrators,=,Medium
-1201,"User Rights Assignment","Allow log on locally",accesschk,SeInteractiveLogonRight,,,,,,"BUILTIN\Administrators;BUILTIN\Backup Operators;BUILTIN\Users;Everyone",BUILTIN\Users;BUILTIN\Administrators,=,Medium
+1000,Features,"SMBv1 Support",WindowsOptionalFeature,smb1protocol,,,,,,Disabled,Disabled,=,High
+1100,"Account Policies","Account lockout threshold",accountpolicy,,,,,,,Never,10,<=,Low
+1101,"Account Policies","Account lockout duration",accountpolicy,,,,,,,30,15,>=,Low
+1102,"Account Policies","Reset account lockout counter",accountpolicy,,,,,,,30,15,>=,Low
+1103,"Account Policies","Store passwords using reversible encryption",secedit,"System Access\ClearTextPassword",,,,,,0,0,=,High
+1200,"User Rights Assignment","Access this computer from the network",accesschk,SeNetworkLogonRight,,,,,,"BUILTIN\Backup Operators;BUILTIN\Users;BUILTIN\Administrators;Everyone",BUILTIN\Administrators,=,Medium
+1201,"User Rights Assignment","Allow log on locally",accesschk,SeInteractiveLogonRight,,,,,,"BUILTIN\Backup Operators;BUILTIN\Users;BUILTIN\Administrators;COMPUTERNAME\Guest",BUILTIN\Users;BUILTIN\Administrators,=,Medium
 1202,"User Rights Assignment","Debug programs",accesschk,SeDebugPrivilege,,,,,,BUILTIN\Administrators,,=,Medium
-1203,"User Rights Assignment","Deny access to this computer from the network",accesschk,SeDenyNetworkLogonRight,,,,,,BUILTIN\Guests,"BUILTIN\Guests;NT AUTHORITY\Local account",=,Medium
+1203,"User Rights Assignment","Deny access to this computer from the network",accesschk,SeDenyNetworkLogonRight,,,,,,COMPUTERNAME\Guest,"BUILTIN\Guests;NT AUTHORITY\Local account",=,Medium
 1204,"User Rights Assignment","Deny log on as a batch job",accesschk,SeDenyBatchLogonRight,,,,,,,BUILTIN\Guests,=,Medium
 1205,"User Rights Assignment","Deny log on as a service",accesschk,SeDenyServiceLogonRight,,,,,,,BUILTIN\Guests,=,Medium
 1206,"User Rights Assignment","Deny log on through Remote Desktop Services",accesschk,SeDenyRemoteInteractiveLogonRight,,,,,,,"BUILTIN\Guests;NT AUTHORITY\Local account",=,Medium
@@ -34,6 +35,8 @@ ID,Category,Name,Method,MethodArgument,RegistryPath,RegistryItem,ClassName,Names
 1321,"Security Options","User Account Control: Admin Approval Mode for the Built-in Administrator account",Registry,,HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System,FilterAdministratorToken,,,,0,1,=,Medium
 1322,"Security Options","User Account Control: Behavior of the elevation prompt for administrators in Admin Approval Mode",Registry,,HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System,ConsentPromptBehaviorAdmin,,,,0,5,=,Medium
 1323,"Security Options","User Account Control: Behavior of the elevation prompt for standard users",Registry,,HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System,ConsentPromptBehaviorUser,,,,0,1,=,Medium
+1325,"Security Options","Network access: Restrict clients allowed to make remote calls to SAM",Registry,,HKLM:\System\CurrentControlSet\Control\Lsa,RestrictRemoteSAM,,,,,O:BAG:BAD:(A;;RC;;;BA),=,Medium
+1326,"Security Options","Network security: Do not store LAN Manager hash value on next password change",Registry,,HKLM:\System\CurrentControlSet\Control\Lsa,NoLMHash,,,,1,1,=,High
 1400,"Windows Firewall","EnableFirewall (Domain Profile, Policy)",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\DomainProfile,EnableFirewall,,,,0,1,=,Medium
 1401,"Windows Firewall","Inbound Connections (Domain Profile, Policy)",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\DomainProfile,DefaultInboundAction,,,,1,1,=,Medium
 1402,"Windows Firewall","Outbound Connections (Domain Profile, Policy)",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\DomainProfile,DefaultOutboundAction,,,,0,0,=,Medium
@@ -52,53 +55,53 @@ ID,Category,Name,Method,MethodArgument,RegistryPath,RegistryItem,ClassName,Names
 1415,"Windows Firewall","Log size limit (Public Profile, Policy)",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\PublicProfile\Logging,LogFileSize,,,,4096,16384,>=,Medium
 1416,"Windows Firewall","Log dropped packets (Public Profile, Policy)",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\PublicProfile\Logging,LogDroppedPackets,,,,0,1,=,Medium
 1417,"Windows Firewall","Log successful connections (Public Profile, Policy)",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\PublicProfile\Logging,LogSuccessfulConnections,,,,0,1,=,Low
-1418,"Windows Firewall","EnableFirewall (Domain Profile)",Registry,,HKLM:\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\DomainProfile,EnableFirewall,,,,0,1,=,Medium
+1418,"Windows Firewall","EnableFirewall (Domain Profile)",Registry,,HKLM:\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\DomainProfile,EnableFirewall,,,,1,1,=,Medium
 1419,"Windows Firewall","Inbound Connections (Domain Profile)",Registry,,HKLM:\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\DomainProfile,DefaultInboundAction,,,,1,1,=,Medium
 1420,"Windows Firewall","Outbound Connections (Domain Profile)",Registry,,HKLM:\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\DomainProfile,DefaultOutboundAction,,,,0,0,=,Medium
 1421,"Windows Firewall","Log size limit (Domain Profile)",Registry,,HKLM:\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\DomainProfile\Logging,LogFileSize,,,,4096,16384,>=,Medium
 1422,"Windows Firewall","Log dropped packets (Domain Profile)",Registry,,HKLM:\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\DomainProfile\Logging,LogDroppedPackets,,,,0,1,=,Medium
 1423,"Windows Firewall","Log successful connections (Domain Profile)",Registry,,HKLM:\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\DomainProfile\Logging,LogSuccessfulConnections,,,,0,1,=,Low
-1424,"Windows Firewall","EnableFirewall (Private Profile)",Registry,,HKLM:\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\StandardProfile,EnableFirewall,,,,0,1,=,Medium
+1424,"Windows Firewall","EnableFirewall (Private Profile)",Registry,,HKLM:\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\StandardProfile,EnableFirewall,,,,1,1,=,Medium
 1425,"Windows Firewall","Inbound Connections (Private Profile)",Registry,,HKLM:\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\StandardProfile,DefaultInboundAction,,,,1,1,=,Medium
 1426,"Windows Firewall","Outbound Connections (Private Profile)",Registry,,HKLM:\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\StandardProfile,DefaultOutboundAction,,,,0,0,=,Medium
 1427,"Windows Firewall","Log size limit (Private Profile)",Registry,,HKLM:\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\StandardProfile\Logging,LogFileSize,,,,4096,16384,>=,Medium
 1428,"Windows Firewall","Log dropped packets (Private Profile)",Registry,,HKLM:\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\StandardProfile\Logging,LogDroppedPackets,,,,0,1,=,Medium
 1429,"Windows Firewall","Log successful connections (Private Profile)",Registry,,HKLM:\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\StandardProfile\Logging,LogSuccessfulConnections,,,,0,1,=,Low
-1430,"Windows Firewall","EnableFirewall (Public Profile)",Registry,,HKLM:\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\PublicProfile,EnableFirewall,,,,0,1,=,Medium
+1430,"Windows Firewall","EnableFirewall (Public Profile)",Registry,,HKLM:\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\PublicProfile,EnableFirewall,,,,1,1,=,Medium
 1431,"Windows Firewall","Inbound Connections (Public Profile)",Registry,,HKLM:\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\PublicProfile,DefaultInboundAction,,,,1,1,=,Medium
 1432,"Windows Firewall","Outbound Connections (Public Profile)",Registry,,HKLM:\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\PublicProfile,DefaultOutboundAction,,,,0,0,=,Medium
 1433,"Windows Firewall","Log size limit (Public Profile)",Registry,,HKLM:\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\PublicProfile\Logging,LogFileSize,,,,4096,16384,>=,Medium
 1434,"Windows Firewall","Log dropped packets (Public Profile)",Registry,,HKLM:\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\PublicProfile\Logging,LogDroppedPackets,,,,0,1,=,Medium
 1435,"Windows Firewall","Log successful connections (Public Profile)",Registry,,HKLM:\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\PublicProfile\Logging,LogSuccessfulConnections,,,,0,1,=,Low
-1500,"Advanced Audit Policy Configuration","Credential Validation",auditpol,,,,,,,,"Success and Failure",=,Low
+1500,"Advanced Audit Policy Configuration","Credential Validation",auditpol,,,,,,,"No Auditing","Success and Failure",=,Low
 1501,"Advanced Audit Policy Configuration","Security Group Management",auditpol,,,,,,,Success,Success,contains,Low
 1502,"Advanced Audit Policy Configuration","User Account Management",auditpol,,,,,,,Success,"Success and Failure",=,Low
-1503,"Advanced Audit Policy Configuration","DPAPI Activity",auditpol,,,,,,,,"Success and Failure",=,Low
-1504,"Advanced Audit Policy Configuration","Plug and Play Events",auditpol,,,,,,,,Success,contains,Low
-1505,"Advanced Audit Policy Configuration","Process Creation",auditpol,,,,,,,,Success,contains,Low
+1503,"Advanced Audit Policy Configuration","DPAPI Activity",auditpol,,,,,,,"No Auditing","Success and Failure",=,Low
+1504,"Advanced Audit Policy Configuration","Plug and Play Events",auditpol,,,,,,,"No Auditing",Success,contains,Low
+1505,"Advanced Audit Policy Configuration","Process Creation",auditpol,,,,,,,"No Auditing",Success,contains,Low
 1506,"Advanced Audit Policy Configuration","Account Lockout",auditpol,,,,,,,Success,Failure,contains,Low
-1507,"Advanced Audit Policy Configuration","Group Membership",auditpol,,,,,,,,Success,contains,Low
-1508,"Advanced Audit Policy Configuration",Logon,auditpol,,,,,,,Success,"Success and Failure",=,Low
-1509,"Advanced Audit Policy Configuration","Other Logon/Logoff Events",auditpol,,,,,,,,"Success and Failure",=,Low
+1507,"Advanced Audit Policy Configuration","Group Membership",auditpol,,,,,,,"No Auditing",Success,contains,Low
+1508,"Advanced Audit Policy Configuration",Logon,auditpol,,,,,,,"Success and Failure","Success and Failure",=,Low
+1509,"Advanced Audit Policy Configuration","Other Logon/Logoff Events",auditpol,,,,,,,"No Auditing","Success and Failure",=,Low
 1510,"Advanced Audit Policy Configuration","Special Logon",auditpol,,,,,,,Success,Success,contains,Low
-1511,"Advanced Audit Policy Configuration","Detailed File Share",auditpol,,,,,,,,Failure,contains,Low
-1512,"Advanced Audit Policy Configuration","File Share",auditpol,,,,,,,,"Success and Failure",=,Low
-1513,"Advanced Audit Policy Configuration","Kernel Object",auditpol,,,,,,,,"Success and Failure",=,Low
-1514,"Advanced Audit Policy Configuration","Other Object Access Events",auditpol,,,,,,,,"Success and Failure",=,Low
-1515,"Advanced Audit Policy Configuration","Removable Storage",auditpol,,,,,,,,"Success and Failure",=,Low
-1516,"Advanced Audit Policy Configuration",SAM,auditpol,,,,,,,Success,"Success and Failure",=,Low
+1511,"Advanced Audit Policy Configuration","Detailed File Share",auditpol,,,,,,,"No Auditing",Failure,contains,Low
+1512,"Advanced Audit Policy Configuration","File Share",auditpol,,,,,,,"No Auditing","Success and Failure",=,Low
+1513,"Advanced Audit Policy Configuration","Kernel Object",auditpol,,,,,,,"No Auditing","Success and Failure",=,Low
+1514,"Advanced Audit Policy Configuration","Other Object Access Events",auditpol,,,,,,,"No Auditing","Success and Failure",=,Low
+1515,"Advanced Audit Policy Configuration","Removable Storage",auditpol,,,,,,,"No Auditing","Success and Failure",=,Low
+1516,"Advanced Audit Policy Configuration",SAM,auditpol,,,,,,,"No Auditing","Success and Failure",=,Low
 1517,"Advanced Audit Policy Configuration","Audit Policy Change",auditpol,,,,,,,Success,Success,contains,Low
 1518,"Advanced Audit Policy Configuration","Authentication Policy Change",auditpol,,,,,,,Success,Success,contains,Low
-1519,"Advanced Audit Policy Configuration","MPSSVC Rule-Level Policy Change",auditpol,,,,,,,,"Success and Failure",=,Low
-1520,"Advanced Audit Policy Configuration","Other Policy Change Events",auditpol,,,,,,,,Failure,contains,Low
-1521,"Advanced Audit Policy Configuration","Sensitive Privilege Use",auditpol,,,,,,,,"Success and Failure",=,Low
+1519,"Advanced Audit Policy Configuration","MPSSVC Rule-Level Policy Change",auditpol,,,,,,,"No Auditing","Success and Failure",=,Low
+1520,"Advanced Audit Policy Configuration","Other Policy Change Events",auditpol,,,,,,,"No Auditing",Failure,contains,Low
+1521,"Advanced Audit Policy Configuration","Sensitive Privilege Use",auditpol,,,,,,,"No Auditing","Success and Failure",=,Low
 1522,"Advanced Audit Policy Configuration","Other System Events",auditpol,,,,,,,"Success and Failure","Success and Failure",=,Low
 1523,"Advanced Audit Policy Configuration","Security State Change",auditpol,,,,,,,Success,Success,contains,Low
-1524,"Advanced Audit Policy Configuration","Security System Extension",auditpol,,,,,,,,Success,contains,Low
+1524,"Advanced Audit Policy Configuration","Security System Extension",auditpol,,,,,,,"No Auditing",Success,contains,Low
 1525,"Advanced Audit Policy Configuration","System Integrity",auditpol,,,,,,,"Success and Failure","Success and Failure",=,Low
 1600,"Administrative Templates: Control Panel","Personalization: Prevent enabling lock screen camera",Registry,,HKLM:\Software\Policies\Microsoft\Windows\Personalization,NoLockScreenCamera,,,,0,1,=,Low
 1601,"Administrative Templates: Network","DNS Client: Turn off multicast name resolution (LLMNR)",Registry,,"HKLM:\Software\Policies\Microsoft\Windows NT\DNSClient",EnableMulticast,,,,1,0,=,Medium
-1602,"Administrative Templates: Network","Lanman Workstation: Enable insecure guest logons",Registry,,HKLM:\Software\Policies\Microsoft\Windows\LanmanWorkstation,AllowInsecureGuestAuth,,,,0,0,=,Medium
+1602,"Administrative Templates: Network","Lanman Workstation: Enable insecure guest logons",Registry,,HKLM:\Software\Policies\Microsoft\Windows\LanmanWorkstation,AllowInsecureGuestAuth,,,,1,0,=,Medium
 1603,"Administrative Templates: Network","Turn off Microsoft Peer-to-Peer Networking Services",Registry,,HKLM:\Software\policies\Microsoft\Peernet,Disabled,,,,0,1,=,Medium
 1604,"Administrative Templates: Network","WLAN Settings: Allow Windows to automatically connect to suggested open hotspots, to networks shared by contacts, and to hotspots offering paid services",Registry,,HKLM:\Software\Microsoft\wcmsvc\wifinetworkmanager\config,AutoConnectAllowedOEM,,,,1,0,=,Medium
 1605,"Administrative Templates: System","Credentials Delegation: Allow delegation default credentials",Registry,,HKLM:\Software\Policies\Microsoft\Windows\CredentialsDelegation,AllowDefaultCredentials,,,,1,0,=,Medium
@@ -111,8 +114,8 @@ ID,Category,Name,Method,MethodArgument,RegistryPath,RegistryItem,ClassName,Names
 1612,"Administrative Templates: System","Device Installation Restrictions: Prevent installation of devices using drivers that match an device setup class (Retroactive)",Registry,,HKLM:\Software\Policies\Microsoft\Windows\DeviceInstall\Restrictions,DenyDeviceClassesRetroactive,,,,0,1,=,Medium
 1613,"Administrative Templates: System","Device Installation Restrictions: Prevent installation of devices using drivers that match d48179be-ec20-11d1-b6b8-00c04fa372a7 (SBP-2 drive)",RegistryList,,HKLM:\HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\DeviceInstall\Restrictions\DenyDeviceClasses,d48179be-ec20-11d1-b6b8-00c04fa372a7,,,,0,d48179be-ec20-11d1-b6b8-00c04fa372a7,=,Medium
 1614,"Administrative Templates: System","Device Guard: Virtualization Based Security Status",CimInstance,,,,Win32_DeviceGuard,root\Microsoft\Windows\DeviceGuard,VirtualizationBasedSecurityStatus,"Not available",2,=,Medium
-1615,"Administrative Templates: System","Device Guard: Available Security Properties: Secure Boot",CimInstance,,,,Win32_DeviceGuard,root\Microsoft\Windows\DeviceGuard,AvailableSecurityProperties,"Not available",2,=,Medium
-1616,"Administrative Templates: System","Device Guard: Available Security Properties: DMA protection",CimInstance,,,,Win32_DeviceGuard,root\Microsoft\Windows\DeviceGuard,AvailableSecurityProperties,"Not available",3,=,Medium
+1615,"Administrative Templates: System","Device Guard: Available Security Properties: Secure Boot",CimInstance,,,,Win32_DeviceGuard,root\Microsoft\Windows\DeviceGuard,AvailableSecurityProperties,2,2,=,Medium
+1616,"Administrative Templates: System","Device Guard: Available Security Properties: DMA protection",CimInstance,,,,Win32_DeviceGuard,root\Microsoft\Windows\DeviceGuard,AvailableSecurityProperties,3,3,=,Medium
 1617,"Administrative Templates: System","Device Guard: Security Services Configured: Credential Guard",CimInstance,,,,Win32_DeviceGuard,root\Microsoft\Windows\DeviceGuard,SecurityServicesConfigured,"Not available",1,=,Medium
 1618,"Administrative Templates: System","Device Guard: Security Services Configured: HVCI",CimInstance,,,,Win32_DeviceGuard,root\Microsoft\Windows\DeviceGuard,SecurityServicesConfigured,"Not available",2,=,Medium
 1619,"Administrative Templates: System","Device Guard: Security Services Running: Credential Guard",CimInstance,,,,Win32_DeviceGuard,root\Microsoft\Windows\DeviceGuard,SecurityServicesRunning,"Not available",1,=,Medium
@@ -179,7 +182,7 @@ ID,Category,Name,Method,MethodArgument,RegistryPath,RegistryItem,ClassName,Names
 1728,"Administrative Templates: Windows Components","Event Log Service: Specify the maximum Application log file size (KB)",Registry,,HKLM:\Software\Policies\Microsoft\Windows\EventLog\Application,MaxSize,,,,4096,32768,>=,Medium
 1729,"Administrative Templates: Windows Components","Event Log Service: Specify the maximum Security log file size (KB)",Registry,,HKLM:\Software\Policies\Microsoft\Windows\EventLog\Security,MaxSize,,,,4096,196608,>=,Medium
 1730,"Administrative Templates: Windows Components","Event Log Service: Specify the maximum System log file size (KB)",Registry,,HKLM:\Software\Policies\Microsoft\Windows\EventLog\System,MaxSize,,,,4096,32768,>=,Medium
-1731,"Administrative Templates: Windows Components","File Explorer: Allow the use of remote paths in file shortcut icons",Registry,,HKLM:\Software\Policies\Microsoft\Windows\Explorer,EnableShellShortcutIconRemotePath,,,,1,0,=,Medium
+1731,"Administrative Templates: Windows Components","File Explorer: Allow the use of remote paths in file shortcut icons",Registry,,HKLM:\Software\Policies\Microsoft\Windows\Explorer,EnableShellShortcutIconRemotePath,,,,0,0,=,Medium
 1732,"Administrative Templates: Windows Components","HomeGroup: Prevent the computer from joining a homegroup",Registry,,HKLM:\Software\Policies\Microsoft\Windows\HomeGroup,DisableHomeGroup,,,,0,1,=,Medium
 1733,"Administrative Templates: Windows Components","OneDrive: Prevent the usage of OneDrive for file storage",Registry,,HKLM:\Software\Policies\Microsoft\Windows\OneDrive,DisableFileSyncNGSC,,,,0,1,=,Medium
 1734,"Administrative Templates: Windows Components","Remote Desktop Connection Client: Do not allow passwords to be saved",Registry,,"HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services",DisablePasswordSaving,,,,0,1,=,Medium
@@ -211,7 +214,7 @@ ID,Category,Name,Method,MethodArgument,RegistryPath,RegistryItem,ClassName,Names
 1760,"Administrative Templates: Windows Components","Windows Remote Shell: Allow Remote Shell Access",Registry,,HKLM:\Software\Policies\Microsoft\Windows\WinRM\Service\WinRS,AllowRemoteShellAccess,,,,1,0,=,Medium
 1800,"Microsoft Defender Antivirus","Turn off Windows Defender Antivirus",Registry,,"HKLM:\Software\Policies\Microsoft\Windows Defender",DisableAntiSpyware,,,,0,0,=,Medium
 1801,"Microsoft Defender Antivirus","Configure detection for potentially unwanted applications",Registry,,"HKLM:\Software\Policies\Microsoft\Windows Defender",PUAProtection,,,,0,1,>=,Medium
-1802,"Microsoft Defender Antivirus","Cloud-delivered protection",MpPreference,MAPSReporting,,,,,,0,2,=,Medium
+1802,"Microsoft Defender Antivirus","Cloud-delivered protection",MpPreference,MAPSReporting,,,,,,2,2,=,Medium
 1803,"Microsoft Defender Antivirus","Automatic sample submission",MpPreference,SubmitSamplesConsent,,,,,,1,0,=,Medium
 1804,"Microsoft Defender Antivirus","Controlled folder access",MpPreference,EnableControlledFolderAccess,,,,,,0,1,=,Medium
 1805,"Microsoft Defender Antivirus","Real time monitoring",MpPreference,DisableRealtimeMonitoring,,,,,,False,False,=,High
@@ -246,22 +249,26 @@ ID,Category,Name,Method,MethodArgument,RegistryPath,RegistryItem,ClassName,Names
 1928,"Microsoft Defender Exploit Guard","ASR: Block Office communication applications from creating child processes",MpPreferenceAsr,26190899-1602-49e8-8b27-eb1d0a1ce869,,,,,,0,1,=,Medium
 1929,"Microsoft Defender Exploit Guard","ASR: Block Adobe Reader from creating child processes",MpPreferenceAsr,7674ba52-37eb-4a4f-a9a1-f0f9a1619a2c,,,,,,0,1,=,Medium
 1930,"Microsoft Defender Exploit Guard","ASR: Block persistence through WMI event subscription",MpPreferenceAsr,e6db77e5-3df2-4cf1-b95a-636979351e5b,,,,,,0,1,=,Medium
-1950,"Microsoft Defender Exploit Guard","Exploit protection: Control flow guard (CFG)",Processmitigation,Cfg.Enable,,,,,,NOTSET,ON,=,Medium
-1951,"Microsoft Defender Exploit Guard","Exploit protection: Data Execution Prevention (DEP)",Processmitigation,DEP.Enable,,,,,,NOTSET,ON,=,Medium
-1952,"Microsoft Defender Exploit Guard","Exploit protection: Override Data Execution Prevention (DEP)",Processmitigation,DEP.OverrideDEP,,,,,,True,False,=,Medium
+1950,"Microsoft Defender Exploit Guard","Exploit protection: Control flow guard (CFG)",Processmitigation,Cfg.Enable,,,,,,On,ON,=,Medium
+1951,"Microsoft Defender Exploit Guard","Exploit protection: Data Execution Prevention (DEP)",Processmitigation,DEP.Enable,,,,,,On,ON,=,Medium
+1952,"Microsoft Defender Exploit Guard","Exploit protection: Override Data Execution Prevention (DEP)",Processmitigation,DEP.OverrideDEP,,,,,,False,False,=,Medium
 1953,"Microsoft Defender Exploit Guard","Force use of Data Execution Prevention (DEP)",bcdedit,nx,,,,,,OptIn,AlwaysOn,=,Medium
-1954,"Microsoft Defender Exploit Guard","Exploit protection: Force randomization for images (Mandatory ASLR)",Processmitigation,ASLR.ForceRelocateImages,,,,,,NOTSET,ON,=,Medium
-1955,"Microsoft Defender Exploit Guard","Exploit protection: Override force randomization for images (Mandatory ASLR)",Processmitigation,ASLR.OverrideForceRelocateImages,,,,,,True,False,=,Medium
-1956,"Microsoft Defender Exploit Guard","Exploit protection: Randomize memory allocations (Bottom-up ASLR)",Processmitigation,ASLR.BottomUp,,,,,,NOTSET,ON,=,Medium
-1957,"Microsoft Defender Exploit Guard","Exploit protection: Override randomize memory allocations (Bottom-up ASLR)",Processmitigation,ASLR.OverrideBottomUp,,,,,,True,False,=,Medium
-1958,"Microsoft Defender Exploit Guard","Exploit protection: High-entropy ASLR",Processmitigation,ASLR.HighEntropy,,,,,,NOTSET,ON,=,Medium
-1959,"Microsoft Defender Exploit Guard","Exploit protection: Override high-entropy ASLR",Processmitigation,ASLR.OverrideHighEntropy,,,,,,True,False,=,Medium
-1960,"Microsoft Defender Exploit Guard","Exploit protection: Validate exception chains (SEHOP)",Processmitigation,SEHOP.Enable,,,,,,NOTSET,ON,=,Medium
-1961,"Microsoft Defender Exploit Guard","Exploit protection: Validate exception chains (SEHOP (Telemetry only)",Processmitigation,SEHOP.TelemetryOnly,,,,,,ON,OFF,=,Medium
-1962,"Microsoft Defender Exploit Guard","Exploit protection: Override validate exception chains (SEHOP)",Processmitigation,SEHOP.OverrideSEHOP,,,,,,True,False,=,Medium
-1963,"Microsoft Defender Exploit Guard","Exploit protection: Validate heap integrity",Processmitigation,HEAP.TerminateOnError,,,,,,NOTSET,ON,=,Medium
-1964,"Microsoft Defender Exploit Guard","Exploit protection: Override validate heap integrity",Processmitigation,HEAP.OverrideHEAP,,,,,,True,False,=,Medium
-2000,"Administrative Templates: Windows Components","FIle Explorer: Configure Windows Defender SmartScreen",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\Windows\System,EnableSmartScreen,,,,1,1,=,Medium
+1954,"Microsoft Defender Exploit Guard","Exploit protection: Force randomization for images (Mandatory ASLR)",Processmitigation,ASLR.ForceRelocateImages,,,,,,Off,ON,=,Medium
+1955,"Microsoft Defender Exploit Guard","Exploit protection: Override force randomization for images (Mandatory ASLR)",Processmitigation,ASLR.OverrideForceRelocateImages,,,,,,False,False,=,Medium
+1956,"Microsoft Defender Exploit Guard","Exploit protection: Randomize memory allocations (Bottom-up ASLR)",Processmitigation,ASLR.BottomUp,,,,,,On,ON,=,Medium
+1957,"Microsoft Defender Exploit Guard","Exploit protection: Override randomize memory allocations (Bottom-up ASLR)",Processmitigation,ASLR.OverrideBottomUp,,,,,,False,False,=,Medium
+1958,"Microsoft Defender Exploit Guard","Exploit protection: High-entropy ASLR",Processmitigation,ASLR.HighEntropy,,,,,,On,ON,=,Medium
+1959,"Microsoft Defender Exploit Guard","Exploit protection: Override high-entropy ASLR",Processmitigation,ASLR.OverrideHighEntropy,,,,,,False,False,=,Medium
+1960,"Microsoft Defender Exploit Guard","Exploit protection: Validate exception chains (SEHOP)",Processmitigation,SEHOP.Enable,,,,,,On,ON,=,Medium
+1961,"Microsoft Defender Exploit Guard","Exploit protection: Validate exception chains (SEHOP (Telemetry only)",Processmitigation,SEHOP.TelemetryOnly,,,,,,NOTSET,OFF,=,Medium
+1962,"Microsoft Defender Exploit Guard","Exploit protection: Override validate exception chains (SEHOP)",Processmitigation,SEHOP.OverrideSEHOP,,,,,,False,False,=,Medium
+1963,"Microsoft Defender Exploit Guard","Exploit protection: Validate heap integrity",Processmitigation,HEAP.TerminateOnError,,,,,,On,ON,=,Medium
+1964,"Microsoft Defender Exploit Guard","Exploit protection: Override validate heap integrity",Processmitigation,HEAP.OverrideHEAP,,,,,,False,False,=,Medium
+1965,"Microsoft Defender Exploit Guard","Network Protection: Prevent users and apps from accessing dangerous websites",Registry,,"HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Windows Defender Exploit Guard\Network Protection",EnableNetworkProtection,,,,,1,=,Medium
+1980,"Microsoft Defender Application Guard","Support for Microsoft Defender Application Guard",WindowsOptionalFeature,Windows-Defender-ApplicationGuard,,,,,,Disabled,Enabled,=,Medium
+1981,"Microsoft Defender Application Guard","Turn on Microsoft Defender Application Guard in Managed Mode",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\AppHVSI,AllowAppHVSI_ProviderSet,,,,,3,=,Medium
+1982,"Microsoft Defender Application Guard","Allow auditing events in Microsoft Defender Application Guard",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\AppHVSI,AuditApplicationGuard,,,,,1,=,Medium
+2000,"Administrative Templates: Windows Components","File Explorer: Configure Windows Defender SmartScreen",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\Windows\System,EnableSmartScreen,,,,1,1,=,Medium
 2001,"Administrative Templates: Windows Components","File Explorer: Configure Windows Defender SmartScreen to warn and prevent bypass",Registry,,HKLM:\SOFTWARE\Policies\Microsoft\Windows\System,ShellSmartScreenLevel,,,,Warn,Block,=,Medium
 2100,PowerShell,"Turn on PowerShell Script Block Logging",Registry,,HKLM:\Software\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging,EnableScriptBlockLogging,,,,0,1,=,Medium
 2101,PowerShell,"Turn on PowerShell Script Block Logging (Invocation)",Registry,,HKLM:\Software\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging,EnableScriptBlockInvocationLogging,,,,0,1,=,Low
@@ -273,6 +280,10 @@ ID,Category,Name,Method,MethodArgument,RegistryPath,RegistryItem,ClassName,Names
 2202,"MS Security Guide","NetBT NodeType configuration",Registry,,HKLM:\SYSTEM\CurrentControlSet\Services\NetBT\Parameters,NodeType,,,,0,2,=,Medium
 2203,"MS Security Guide","WDigest Authentication",Registry,,HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\WDigest,UseLogonCredential,,,,,0,=,High
 2204,"MSS (Legacy)","Enable Safe DLL search mode",Registry,,"HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager",SafeDLLSearchMode,,,,0,1,=,Medium
+2205,"MSS (Legacy)","MSS: (DisableIPSourceRouting IPv6) IP source routing protection level (protects against packet spoofing)",Registry,,HKLM:\System\CurrentControlSet\Services\Tcpip6\Parameters,DisableIPSourceRouting,,,,,2,=,Medium
+2206,"MSS (Legacy)","MSS: (DisableIPSourceRouting) IP source routing protection level (protects against packet spoofing)",Registry,,HKLM:\System\CurrentControlSet\Services\Tcpip\Parameters,DisableIPSourceRouting,,,,,2,=,Medium
+2207,"MSS (Legacy)","MSS: (EnableICMPRedirect) Allow ICMP redirects to override OSPF generated routes",Registry,,HKLM:\System\CurrentControlSet\Services\Tcpip\Parameters,EnableICMPRedirect,,,,,0,=,Medium
+2208,"MSS (Legacy)","MSS: (NoNameReleaseOnDemand) Allow the computer to ignore NetBIOS name release requests except from WINS servers",Registry,,HKLM:\System\CurrentControlSet\Services\Netbt\Parameters,NoNameReleaseOnDemand,,,,0,1,=,Medium
 2300,"Windows Firewall",HardeningKitty-Block-TCP-NetBIOS,FirewallRule,"Any|Inbound|Block|TCP|137,138,139||",,,,,,False,True,=,Low
 2301,"Windows Firewall",HardeningKitty-Block-TCP-RDP,FirewallRule,Any|Inbound|Block|TCP|3389||,,,,,,False,True,=,Low
 2302,"Windows Firewall",HardeningKitty-Block-TCP-RPC,FirewallRule,"Any|Inbound|Block|TCP|135,593||",,,,,,False,True,=,Low

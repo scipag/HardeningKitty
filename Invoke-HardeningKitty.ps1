@@ -678,7 +678,7 @@
                     If ($Finding.Name.Contains("account status")){
                         $Result = $ResultOutput.Enabled
                     }
-                    ElseIf ($Finding.Name.Contains("Renames")) {
+                    ElseIf ($Finding.Name.Contains("Rename")) {
                         $Result = $ResultOutput.Name
                     }
                     Else {
@@ -989,6 +989,7 @@
                     ">=" { try { If ([int]$Result -ge [int]$Finding.RecommendedValue) { $ResultPassed = $true }} catch { $ResultPassed = $false }; Break}
                     "contains" { If ($Result.Contains($Finding.RecommendedValue)) { $ResultPassed = $true }; Break}
                     "!="  { If ([string] $Result -ne $Finding.RecommendedValue) { $ResultPassed = $true }; Break}
+                    "<=!0" { try { If ([int]$Result -le [int]$Finding.RecommendedValue -and [int]$Result -ne 0) { $ResultPassed = $true }} catch { $ResultPassed = $false }; Break}
                 }
 
                 If ($ResultPassed) {

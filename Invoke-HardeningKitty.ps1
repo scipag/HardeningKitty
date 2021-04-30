@@ -607,7 +607,7 @@
                                             
                 try {
 
-                    $SubCategory = $Finding.Name    
+                    $SubCategory = $Finding.MethodArgument
                     $ResultOutput = &$BinaryAuditpol /get /subcategory:"$SubCategory"
                     
                     # "Parse" auditpol.exe output
@@ -678,7 +678,7 @@
                     If ($Finding.Name.Contains("account status")){
                         $Result = $ResultOutput.Enabled
                     }
-                    ElseIf ($Finding.Name.Contains("Renames")) {
+                    ElseIf ($Finding.Name.Contains("Rename")) {
                         $Result = $ResultOutput.Name
                     }
                     Else {
@@ -882,7 +882,7 @@
             }
 
             #
-            # Exploit protection
+            # Exploit protection (System)
             # The values are saved from a PowerShell function into an object.
             # The desired arguments can be accessed directly.
             # Since the object has several dimensions and there is only one dimension
@@ -902,6 +902,28 @@
                     $Result = $Finding.DefaultValue
                 }
             }
+
+            #
+            # Exploit protection (Application)
+            # The values are saved from a PowerShell function into an object.
+            # The desired arguments can be accessed directly.
+            # Since the object has several dimensions and there is only one dimension
+            # in the finding list (lazy) a workaround with split must be done...
+            #
+            ElseIf ($Finding.Method -eq 'ProcessmitigationApplication') {
+
+                try {  
+
+                    $ResultArgumentArray = $Finding.MethodArgument.Split("/")
+                    $ResultOutput = Get-Processmitigation -Name $ResultArgumentArray[0]                    
+                    $ResultArgument0 = $ResultArgumentArray[1]
+                    $ResultArgument1 = $ResultArgumentArray[2]
+                    $Result = $ResultOutput.$ResultArgument0.$ResultArgument1
+
+                } catch {
+                    $Result = $Finding.DefaultValue
+                }
+            }            
 
             #
             # bcdedit
@@ -986,6 +1008,7 @@
 
                     "="  { If ([string] $Result -eq $Finding.RecommendedValue) { $ResultPassed = $true }; Break}
                     "<=" { try { If ([int]$Result -le [int]$Finding.RecommendedValue) { $ResultPassed = $true }} catch { $ResultPassed = $false }; Break}
+                    "<=!0" { try { If ([int]$Result -le [int]$Finding.RecommendedValue -and [int]$Result -ne 0) { $ResultPassed = $true }} catch { $ResultPassed = $false }; Break}
                     ">=" { try { If ([int]$Result -ge [int]$Finding.RecommendedValue) { $ResultPassed = $true }} catch { $ResultPassed = $false }; Break}
                     "contains" { If ($Result.Contains($Finding.RecommendedValue)) { $ResultPassed = $true }; Break}
                     "!="  { If ([string] $Result -ne $Finding.RecommendedValue) { $ResultPassed = $true }; Break}
@@ -1300,7 +1323,7 @@
                 $Success = if($Finding.RecommendedValue -ilike "*success*") {"enable"} else {"disable"}
                 $Failure = if($Finding.RecommendedValue -ilike "*failure*") {"enable"} else {"disable"}
 
-                $SubCategory = $Finding.Name
+                $SubCategory = $Finding.MethodArgument
 
                 &$BinaryAuditpol /set /subcategory:"$($SubCategory)" /success:$($Success) /failure:$($Failure) | Out-Null
 
@@ -1745,7 +1768,9 @@
         $StatsTotal = $StatsPassed + $StatsLow + $StatsMedium + $StatsHigh
         $ScoreTotal = $StatsTotal * 4
         $ScoreAchived = $StatsPassed * 4 + $StatsLow * 2 + $StatsMedium
-        $HardeningKittyScore = ([int] $ScoreAchived / [int] $ScoreTotal) * 5 + 1
+        If ($ScoreTotal -ne 0 ) {
+            $HardeningKittyScore = ([int] $ScoreAchived / [int] $ScoreTotal) * 5 + 1
+        }        
         $HardeningKittyScoreRounded = [math]::round($HardeningKittyScore,2)
 
         # Overwrite HardeningKitty Score if no finding is passed

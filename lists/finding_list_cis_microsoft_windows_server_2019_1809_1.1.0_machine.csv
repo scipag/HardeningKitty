@@ -26,7 +26,7 @@ ID,Category,Name,Method,MethodArgument,RegistryPath,RegistryItem,ClassName,Names
 2.2.16,"User Rights Assignment","Create permanent shared objects",accesschk,SeCreatePermanentPrivilege,,,,,,,,=,Medium
 2.2.17,"User Rights Assignment","Create symbolic links (DC)",accesschk,SeCreateSymbolicLinkPrivilege,,,,,,BUILTIN\Administrators,BUILTIN\Administrators,=,Medium
 2.2.18.1,"User Rights Assignment","Create symbolic links (Member)",accesschk,SeCreateSymbolicLinkPrivilege,,,,,,BUILTIN\Administrators,BUILTIN\Administrators,=,Medium
-2.2.18.2,"User Rights Assignment","Create symbolic links (Member, Hyper-V)",accesschk,SeCreateSymbolicLinkPrivilege,,,,,,S-1-5-83-0;BUILTIN\Administrators,S-1-5-83-0;BUILTIN\Administrators,=,Medium
+2.2.18.2,"User Rights Assignment","Create symbolic links (Member, Hyper-V)",accesschk,SeCreateSymbolicLinkPrivilege,,,,,,S-1-5-83-0;BUILTIN\Administrators,"NT VIRTUAL MACHINE\Virtual Machines;BUILTIN\Administrators",=,Medium
 2.2.19,"User Rights Assignment","Debug programs",accesschk,SeDebugPrivilege,,,,,,BUILTIN\Administrators,BUILTIN\Administrators,=,Medium
 2.2.20,"User Rights Assignment","Deny access to this computer from the network (DC)",accesschk,SeDenyNetworkLogonRight,,,,,,BUILTIN\Guests,BUILTIN\Guests,=,Medium
 2.2.21,"User Rights Assignment","Deny access to this computer from the network (Member)",accesschk,SeDenyNetworkLogonRight,,,,,,BUILTIN\Guests,"BUILTIN\Guests;NT AUTHORITY\Local account and member of Administrators group",=,Medium
@@ -82,7 +82,7 @@ ID,Category,Name,Method,MethodArgument,RegistryPath,RegistryItem,ClassName,Names
 2.3.7.3,"Security Options","Interactive logon: Machine inactivity limit",Registry,,HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System,InactivityTimeoutSecs,,,,900,900,<=!0,Medium
 2.3.7.4,"Security Options","Interactive logon: Message text for users attempting to log on",Registry,,HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System,LegalNoticeText,,,,,,!=,Low
 2.3.7.5,"Security Options","Interactive logon: Message title for users attempting to log on",Registry,,HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System,LegalNoticeCaption,,,,,,!=,Low
-2.3.7.6,"Security Options","Interactive logon: Number of previous logons to cache (in case domain controller is not available)",Registry,,HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System,CachedLogonsCount,,,,10,4,<=,Medium
+2.3.7.6,"Security Options","Interactive logon: Number of previous logons to cache (in case domain controller is not available)",Registry,,"HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon",CachedLogonsCount,,,,10,4,<=,Medium
 2.3.7.7.1,"Security Options","Interactive logon: Prompt user to change password before expiration (Max)",Registry,,HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System,PasswordExpiryWarning,,,,5,14,<=,Low
 2.3.7.7.2,"Security Options","Interactive logon: Prompt user to change password before expiration (Min)",Registry,,HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System,PasswordExpiryWarning,,,,5,5,>=,Low
 2.3.7.8,"Security Options","Interactive logon: Require Domain Controller Authentication to unlock workstation (Member)",Registry,,"HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Winlogon",ForceUnlockLogon,,,,,1,=,Medium
@@ -213,7 +213,7 @@ ID,Category,Name,Method,MethodArgument,RegistryPath,RegistryItem,ClassName,Names
 18.4.5,"MSS (Legacy)","MSS: (KeepAliveTime) How often keep-alive packets are sent in milliseconds",Registry,,HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters,KeepAliveTime,,,,,300000,<=,Medium
 18.4.6,"MSS (Legacy)","MSS: (NoNameReleaseOnDemand) Allow the computer to ignore NetBIOS name release requests except from WINS servers",Registry,,HKLM:\System\CurrentControlSet\Services\Netbt\Parameters,NoNameReleaseOnDemand,,,,0,1,=,Medium
 18.4.7,"MSS (Legacy)","MSS: (PerformRouterDiscovery) Allow IRDP to detect and configure Default Gateway addresses (could lead to DoS)",Registry,,HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters,PerformRouterDiscovery,,,,,0,=,Medium
-18.4.8,"MSS (Legacy)","Enable Safe DLL search mode",Registry,,"HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager",SafeDLLSearchMode,,,,0,1,=,Medium
+18.4.8,"MSS (Legacy)","MSS: (SafeDllSearchMode) Enable Safe DLL search mode (recommended)",Registry,,"HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager",SafeDLLSearchMode,,,,0,1,=,Medium
 18.4.9,"MSS (Legacy)","MSS: (ScreenSaverGracePeriod) The time in seconds before the screen saver grace period expires (0 recommended)",Registry,,"HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon",ScreenSaverGracePeriod,,,,5,5,<=,Medium
 18.4.10,"MSS (Legacy)","MSS: (TcpMaxDataRetransmissions IPv6) How many times unacknowledged data is retransmitted",Registry,,HKLM:\System\CurrentControlSet\Services\Tcpip6\Parameters,TcpMaxDataRetransmissions,,,,5,3,<=,Medium
 18.4.11,"MSS (Legacy)","MSS: (TcpMaxDataRetransmissions) How many times unacknowledged data is retransmitted",Registry,,HKLM:\System\CurrentControlSet\Services\Tcpip\Parameters,TcpMaxDataRetransmissions,,,,5,3,<=,Medium
@@ -350,7 +350,7 @@ ID,Category,Name,Method,MethodArgument,RegistryPath,RegistryItem,ClassName,Names
 18.9.61.3,"Administrative Templates: Windows Components","Search: Allow indexing of encrypted files",Registry,,"HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search",AllowIndexingEncryptedStoresOrItems,,,,1,0,=,Medium
 18.9.66.1,"Administrative Templates: Windows Components","Software Protection Platform: Turn off KMS Client Online AVS Validation",Registry,,"HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\CurrentVersion\Software Protection Platform",NoGenTicket,,,,,1,=,Medium
 18.9.77.3.1,"Microsoft Defender Antivirus","MAPS: Configure local setting override for reporting to Microsoft MAPS",Registry,,"HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Spynet",LocalSettingOverrideSpynetReporting,,,,,0,=,Medium
-18.9.77.3.2,"Microsoft Defender Antivirus","MAPS: Join Microsoft MAPS",Registry,,"HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Spynet",SpynetReporting,,,,,0,=,Medium
+18.9.77.3.2,"Microsoft Defender Antivirus","MAPS: Join Microsoft MAPS",Registry,,"HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Spynet",SpynetReporting,,,,,0,=|0,Medium
 18.9.77.7.1,"Microsoft Defender Antivirus","Real-time Protection: Turn on behavior monitoring (Policy)",Registry,,"HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection",DisableBehaviorMonitoring,,,,,0,=,Medium
 18.9.77.9.1,"Microsoft Defender Antivirus","Reporting: Configure Watson events",Registry,,"HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Reporting",DisableGenericRePorts,,,,,1,=,Medium
 18.9.77.10.1,"Microsoft Defender Antivirus","Scan: Scan removable drives",Registry,,"HKLM:\Software\Policies\Microsoft\Windows Defender\Scan",DisableRemovableDriveScanning,,,,,0,=,Medium

@@ -4,15 +4,13 @@ This is the stable version of Hardening Kitty from the [Windows Hardening Projec
 
 _HardeningKitty_ supports hardening of a Windows system. The configuration of the system is retrieved and assessed using a finding list. In addition, the system can be hardened according to predefined values. _HardeningKitty_ reads settings from the registry and uses other modules to read configurations outside the registry.
 
-**Attention**: HardeningKitty has a dependency for the tool AccessChk by Mark Russinovich. This must be present on the computer and defined in the script accordingly.
-
 The script was developed for English systems. It is possible that in other languages the analysis is incorrect. Please create an issue if this occurs.
 
 ## How to run
 
 Run the script with administrative privileges to access machine settings. For the user settings it is better to execute them with a normal user account. Ideally, the user account is used for daily work.
 
-Download _HardeningKitty_ and copy it to the target system (script and lists). Additionally, [AccessChk](https://docs.microsoft.com/en-us/sysinternals/downloads/accesschk) (tested with version 1.6.2) must be available on the target system. The path of the variable _$BinaryAccesschk_ must be modified accordingly. After that HardeningKitty can be imported and executed:
+Download _HardeningKitty_ and copy it to the target system (script and lists). After that HardeningKitty can be imported and executed:
 
 ```powershell
 PS C:\> Import-Module Invoke-HardeningKitty.ps1
@@ -82,6 +80,12 @@ HardeningKitty can be used to audit systems against the following baselines / be
 | :--- | :---------------- | :------  |
 | 0x6d69636b (Machine) | 2009 | |
 | 0x6d69636b (User) | 2009 | |
+| BSI SiSyPHuS Windows 10 hoher Schutzbedarf Domänenmitglied (Machine) | 1809 | 1.0 |
+| BSI SiSyPHuS Windows 10 hoher Schutzbedarf Domänenmitglied (User) | 1809| 1.0
+| BSI SiSyPHuS Windows 10 normaler Schutzbedarf Domänenmitglied (Machine) | 1809| 1.0 |
+| BSI SiSyPHuS Windows 10 normaler Schutzbedarf Domänenmitglied (User) | 1809| 1.0 |
+| BSI SiSyPHuS Windows 10 normaler Schutzbedarf Einzelrechner (Machine) | 1809| 1.0 |
+| BSI SiSyPHuS Windows 10 normaler Schutzbedarf Einzelrechner (User) | 1809 | 1.0 |
 | CIS Microsoft Windows 10 Enterprise (Machine) | 1809 | 1.6.1 |
 | CIS Microsoft Windows 10 Enterprise (User) | 1809 | 1.6.1 |
 | CIS Microsoft Windows 10 Enterprise (Machine) | 1903 | 1.7.1 |
@@ -92,6 +96,10 @@ HardeningKitty can be used to audit systems against the following baselines / be
 | CIS Microsoft Windows 10 Enterprise (User) | 2004 | 1.9.1 |
 | CIS Microsoft Windows 10 Enterprise (Machine) | 2009 | 1.10.1 |
 | CIS Microsoft Windows 10 Enterprise (User) | 2009 | 1.10.1 |
+| CIS Microsoft Windows Server 2012 R2 (Machine) | R2 | 2.4.0 |
+| CIS Microsoft Windows Server 2012 R2 (User) | R2 | 2.4.0 |
+| CIS Microsoft Windows Server 2016 (Machine) | 1607 | 1.2.0 |
+| CIS Microsoft Windows Server 2016 (User) | 1607 | 1.2.0 |
 | CIS Microsoft Windows Server 2019 (Machine) | 1809 | 1.1.0 |
 | CIS Microsoft Windows Server 2019 (User) | 1809 | 1.1.0 |
 | CIS Microsoft Windows Server 2019 (Machine) | 1809 | 1.2.0 |
@@ -116,3 +124,6 @@ HardeningKitty can be used to audit systems against the following baselines / be
 | Microsoft Security baseline for Office 365 ProPlus (User) | Sept 2019 | Final |
 | Microsoft Security Baseline for Microsoft 365 Apps for enterprise (Machine) | March 2021 | Final |
 | Microsoft Security Baseline for Microsoft 365 Apps for enterprise (User) | March 2021 | Final |
+| Microsoft Windows Server TLS Settings | 1809 | 1.0 |
+| Microsoft Windows Server TLS Settings (Future Use with TLSv1.3) | 1903 | 1.0 |
+

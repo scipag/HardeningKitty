@@ -12,7 +12,7 @@
 
         Author:  Michael Schneider
         License: MIT
-        Required Dependencies: AccessChk by Mark Russinovich
+        Required Dependencies: None
         Optional Dependencies: None
 
 
@@ -62,17 +62,22 @@
 
         The name and location of the report file can be defined by the user.
 
+    .PARAMETER SkipMachineInformation
 
-    .PARAMETER BinaryAccesschk
-
-        The path of the AccessChk binary can be defined by the user.
-
+        Information about the system is not queried and displayed. This may be useful while debugging or
+        using multiple lists on the same system.
 
     .EXAMPLE
         
-        Invoke-HardeningKitty -Mode "Audit" -Log -Report
+        Description: HardeningKitty performs an audit, saves the results and creates a log file:
+        Invoke-HardeningKitty -Mode Audit -Log -Report
+
+        Description: HardeningKitty performs an audit with a specific list and does not show machine information:
+        Invoke-HardeningKitty -FileFindingList .\lists\finding_list_0x6d69636b_user.csv -SkipMachineInformation
+
+        Description: HardeningKitty ready only the setting with the default list, and saves the results in a specific file:
+        Invoke-HardeningKitty -Mode Config -Report -Report C:\tmp\my_hardeningkitty_report.log
         
-        Description: HardeningKitty performs an audit, saves the results and creates a log file
     #>
 
     [CmdletBinding()]
@@ -96,6 +101,10 @@
         [Switch]
         $Log = $false,
 
+        # Skip machine information, useful when debugging
+        [Switch]
+        $SkipMachineInformation = $false,        
+
         # Define name and path of the log file
         [String]
         $LogFile,
@@ -106,12 +115,7 @@
 
         # Define name and path of the report file
         [String]
-        $ReportFile,
-
-        # Define path to accessak binary
-        [ValidateScript({Test-Path $_})]
-        [String]
-        $BinaryAccesschk = "C:\tmp\accesschk64.exe"
+        $ReportFile
     )
 
     Function Write-ProtocolEntry {
@@ -280,11 +284,14 @@
     }
 
     Function Out-IniFile($InputObject, $FilePath, $Encoding) {
+
         <#
             .SYNOPSIS
+
                 Write a hashtable out to a .ini file
 
             .NOTES
+
                 Original source see https://devblogs.microsoft.com/scripting/use-powershell-to-work-with-any-ini-file/
         #>
 
@@ -310,15 +317,21 @@
     }    
 
     Function Get-HashtableValueDeep {
+
         <#
             .SYNOPSIS
+
                 Get a value from a tree of hashtables
         #>
 
         [CmdletBinding()]
         Param (
-            [Hashtable] $Table,
-            [String] $Path
+
+            [Hashtable]
+            $Table,
+
+            [String]
+            $Path
         )
 
         $Key = $Path.Split('\', 2)
@@ -341,16 +354,24 @@
     }
 
     Function Set-HashtableValueDeep {
+
         <#
             .SYNOPSIS
+
                 Set a value in a tree of hashtables
         #>
 
         [CmdletBinding()]
         Param (
-            [Hashtable] $Table,
-            [String] $Path,
-            [String] $Value
+
+            [Hashtable]
+            $Table,
+
+            [String]
+            $Path,
+
+            [String]
+            $Value
         )
 
         $Key = $Path.Split('\', 2)
@@ -370,9 +391,116 @@
         }
     }
 
+    Function Get-SidFromAccount {
+
+        <#
+            .SYNOPSIS
+
+                Translate the account name (user or group) into the Security Identifier (SID)
+        #>
+    
+        [CmdletBinding()]
+        Param (
+            
+            [String]
+            $AccountName
+        )
+
+        try {
+
+            $AccountObject = New-Object System.Security.Principal.NTAccount($AccountName)
+            $AccountSid = $AccountObject.Translate([System.Security.Principal.SecurityIdentifier]).Value            
+
+        } catch {
+
+            # If translation fails, return account name
+            $AccountSid = $AccountName 
+        }
+
+        Return $AccountSid
+    }
+
+    Function Get-AccountFromSid {
+
+        <#
+            .SYNOPSIS
+
+                Translate the Security Identifier (SID) into the account name (user or group)
+        #>
+    
+        [CmdletBinding()]
+        Param (
+
+            [String]
+            $AccountSid
+        )
+
+        try {
+
+            $AccountObject = New-Object System.Security.Principal.SecurityIdentifier ($AccountSid)
+            $AccountName = $AccountObject.Translate([System.Security.Principal.NTAccount]).Value            
+
+        } catch {
+
+            # If translation fails, return account SID
+            $AccountName = $AccountSid 
+        }
+
+        Return $AccountName
+    }
+
+    Function Translate-SidFromWellkownAccount {
+
+        <#
+            .SYNOPSIS
+
+                Translate the well-known account name (user or group) into the Security Identifier (SID)
+                No attempt is made to get a Computer SID or Domain SID to identify groups such as Domain Admins,
+                as the possibility for false positives is too great. In this case the account name is returned.
+        #>
+
+        [CmdletBinding()]
+        Param (
+            
+            [String]
+            $AccountName
+        )     
+
+        Switch ($AccountName) {
+
+            "BUILTIN\Account Operators" { $AccountSid = "S-1-5-32-548"; Break}
+            "BUILTIN\Administrators" { $AccountSid = "S-1-5-32-544"; Break}
+            "BUILTIN\Backup Operators" { $AccountSid = "S-1-5-32-551"; Break}
+            "BUILTIN\Guests" { $AccountSid = "S-1-5-32-546"; Break}
+            "BUILTIN\Power Users" { $AccountSid = "S-1-5-32-547"; Break}
+            "BUILTIN\Print Operators" { $AccountSid = "S-1-5-32-550"; Break}
+            "BUILTIN\Remote Desktop Users" { $AccountSid = "S-1-5-32-555"; Break}
+            "BUILTIN\Server Operators" { $AccountSid = "S-1-5-32-549"; Break}
+            "BUILTIN\Users" { $AccountSid = "S-1-5-32-545"; Break}
+            "Everyone" { $AccountSid = "S-1-1-0"; Break}
+            "NT AUTHORITY\ANONYMOUS LOGON" { $AccountSid = "S-1-5-7"; Break}
+            "NT AUTHORITY\Authenticated Users" { $AccountSid = "S-1-5-11"; Break}
+            "NT AUTHORITY\ENTERPRISE DOMAIN CONTROLLERS" { $AccountSid = "S-1-5-9"; Break}
+            "NT AUTHORITY\IUSR" { $AccountSid = "S-1-5-17"; Break}
+            "NT AUTHORITY\Local account and member of Administrators group" { $AccountSid = "S-1-5-114"; Break}
+            "NT AUTHORITY\Local account" { $AccountSid = "S-1-5-113"; Break}
+            "NT AUTHORITY\LOCAL SERVICE" { $AccountSid = "S-1-5-19"; Break}
+            "NT AUTHORITY\NETWORK SERVICE" { $AccountSid = "S-1-5-20"; Break}
+            "NT AUTHORITY\SERVICE" { $AccountSid = "S-1-5-6"; Break}
+            "NT AUTHORITY\SYSTEM" { $AccountSid = "S-1-5-18"; Break}
+            "NT SERVICE\WdiServiceHost" { $AccountSid = "S-1-5-80-3139157870-2983391045-3678747466-658725712-1809340420"; Break}
+            "NT VIRTUAL MACHINE\Virtual Machines" { $AccountSid = "S-1-5-83-0"; Break}
+            "Window Manager\Window Manager Group" { $AccountSid = "S-1-5-90-0"; Break}
+            Default  { $AccountSid = $AccountName }
+        }        
+
+        Return $AccountSid
+    }
+
     #
     # Start Main
     #
+    $HardeningKittyVersion = "0.6.0-1621229896"
 
     #
     # Log and report file
@@ -407,37 +535,39 @@
     #
     Write-Output "`n"
     Write-Output "      =^._.^="
-    Write-Output "     _(      )/  HardeningKitty"
+    Write-Output "     _(      )/  HardeningKitty $HardeningKittyVersion"
     Write-Output "`n"    
     Write-ProtocolEntry -Text "Starting HardeningKitty" -LogLevel "Info"
 
     #
     # Machine information
     #
-    Write-Output "`n" 
-    Write-ProtocolEntry -Text "Getting machine information" -LogLevel "Info"
-    $MachineInformation = Get-ComputerInfo
+    If (-not($SkipMachineInformation)) {
+        Write-Output "`n" 
+        Write-ProtocolEntry -Text "Getting machine information" -LogLevel "Info"
+        $MachineInformation = Get-ComputerInfo
 
-    $Message = "Hostname: "+$MachineInformation.CsDNSHostName
-    Write-ProtocolEntry -Text $Message -LogLevel "Notime"
-    $Message = "Domain: "+$MachineInformation.CsDomain
-    Write-ProtocolEntry -Text $Message -LogLevel "Notime"
-    $Message = "Domain role: "+$MachineInformation.CsDomainRole
-    Write-ProtocolEntry -Text $Message -LogLevel "Notime"
-    $Message = "Install date: "+$MachineInformation.OsInstallDate
-    Write-ProtocolEntry -Text $Message -LogLevel "Notime"
-    $Message = "Last Boot Time: "+$MachineInformation.OsLastBootUpTime
-    Write-ProtocolEntry -Text $Message -LogLevel "Notime"
-    $Message = "Uptime: "+$MachineInformation.OsUptime
-    Write-ProtocolEntry -Text $Message -LogLevel "Notime"
-    $Message = "Windows: "+$MachineInformation.WindowsProductName
-    Write-ProtocolEntry -Text $Message -LogLevel "Notime"
-    $Message = "Windows edition: "+$MachineInformation.WindowsEditionId
-    Write-ProtocolEntry -Text $Message -LogLevel "Notime"
-    $Message = "Windows version: "+$MachineInformation.WindowsVersion
-    Write-ProtocolEntry -Text $Message -LogLevel "Notime"
-    $Message = "Windows build: "+$MachineInformation.WindowsBuildLabEx
-    Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+        $Message = "Hostname: "+$MachineInformation.CsDNSHostName
+        Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+        $Message = "Domain: "+$MachineInformation.CsDomain
+        Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+        $Message = "Domain role: "+$MachineInformation.CsDomainRole
+        Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+        $Message = "Install date: "+$MachineInformation.OsInstallDate
+        Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+        $Message = "Last Boot Time: "+$MachineInformation.OsLastBootUpTime
+        Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+        $Message = "Uptime: "+$MachineInformation.OsUptime
+        Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+        $Message = "Windows: "+$MachineInformation.WindowsProductName
+        Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+        $Message = "Windows edition: "+$MachineInformation.WindowsEditionId
+        Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+        $Message = "Windows version: "+$MachineInformation.WindowsVersion
+        Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+        $Message = "Windows build: "+$MachineInformation.WindowsBuildLabEx
+        Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+    }
 
     #
     # User information
@@ -479,7 +609,7 @@
             # Category
             #
             If ($LastCategory -ne $Finding.Category) {
-                         
+
                 $Message = "Starting Category " + $Finding.Category
                 Write-Output "`n"                
                 Write-ProtocolEntry -Text $Message -LogLevel "Info"
@@ -596,7 +726,7 @@
                     Write-ProtocolEntry -Text $Message -LogLevel "Error"
                     Continue
                 }
-                
+
                 # Check if the user has admin rights, skip test if not
                 If (-not($IsAdmin)) {
                     $StatsError++
@@ -604,7 +734,7 @@
                     Write-ProtocolEntry -Text $Message -LogLevel "Error"
                     Continue
                 }
-                                            
+
                 try {
 
                     $SubCategory = $Finding.MethodArgument
@@ -692,20 +822,22 @@
 
             #
             # User Rights Assignment
-            # Unfortunately there is no easy way to read out these results. Therefore the Sysinternals tool
-            # accesschk is used and its output is parsed. To simplify parsing, the output is reduced.
-            # If several users/groups have the appropriate rights, these are displayed per line. Therefore,
-            # a loop must be performed over the output and all users/groups are combined in one variable at the end.
-            # The values used are from the Microsoft documentation at:
-            # https://docs.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/user-rights-assignment
+            # This method was first developed with the tool accessck.exe, hence the name.
+            # Due to compatibility problems in languages other than English, secedit.exe is
+            # now used to read the User Rights Assignments.
+            #
+            # Secedit configures and analyzes system security, results are written
+            # to a file, which means HardeningKitty must create a temporary file
+            # and afterwards delete it. HardeningKitty is very orderly.   
             #
             ElseIf ($Finding.Method -eq 'accesschk') {
 
                 # Check if binary is available, skip test if not
-                If (-Not (Test-Path $BinaryAccesschk)) {
+                $BinarySecedit = "C:\Windows\System32\secedit.exe"
+                If (-Not (Test-Path $BinarySecedit)) {
                     $StatsError++
-                    $Message = "ID "+$Finding.ID+", "+$Finding.Name+", Method "+$Finding.Method+" requires accesschk, and the binary for accesschk was not found. Test skipped."
-                    Write-ProtocolEntry -Text $Message -LogLevel "Error"
+                    $Message = "ID "+$Finding.ID+", "+$Finding.Name+", Method "+$Finding.Method+" requires secedit, and the binary for secedit was not found. Test skipped."
+                    Write-ProtocolEntry -Text $Message -LogLevel "Error"                    
                     Continue
                 }
 
@@ -717,28 +849,31 @@
                     Continue
                 }
 
+                $TempFileName = [System.IO.Path]::GetTempFileName()
+
                 try { 
                                    
-                    $ResultOutput = &$BinaryAccesschk -accepteula -nobanner -a $Finding.MethodArgument
+                    &$BinarySecedit /export /cfg $TempFileName /areas USER_RIGHTS | Out-Null
+                    $ResultOutputRaw = Get-Content -Encoding unicode $TempFileName | Select-String $Finding.MethodArgument
 
-                    # "Parse" accesschk.exe output
-                    ForEach($ResultEntry in $ResultOutput) {
-
-                        If ($ResultEntry.Contains("No accounts granted")) {
-                            
-                            $Result = ""
-                            Break
-
-                        } Else {
-
-                            [String] $Result += $ResultEntry.Trim()+";"
-                        }
+                    If ($ResultOutputRaw -eq $null) {
+                        $Result = ""
                     }
-                    # Remove last character
-                    $Result = $Result -replace “.$”
+                    Else {
+                        $ResultOutputList = $ResultOutputRaw.ToString().split("=").Trim()
+                        $Result = $ResultOutputList[1] -Replace "\*",""
+                        $Result = $Result -Replace ",",";"
+                    }
+
                 } catch {
-                    $Result = $Finding.DefaultValue
+                    # If secedit did not work, throw an error instead of using the DefaultValue
+                    $StatsError++
+                    $Message = "ID "+$Finding.ID+", "+$Finding.Name+", secedit.exe could not read the configuration. Test skipped."
+                    Write-ProtocolEntry -Text $Message -LogLevel "Error"
+                    Continue
                 }
+
+                Remove-Item $TempFileName
             }
 
             #
@@ -1035,6 +1170,38 @@
             # There are two output formats, one for command line output and one for the CSV file.
             #
             If ($Mode -eq "Audit") {
+
+                #
+                # User Right Assignment
+                # For multilingual support, a SID translation takes place and then the known SID values are compared with each other.
+                # The results are already available as SID (from secedit) and therefore the specifications are now also translated and still sorted.
+                #
+                If ($Finding.Method -eq 'accesschk') {
+
+                    If ($Result -ne '') {
+
+                        $SaveRecommendedValue = $Finding.RecommendedValue
+                        $ListRecommended = $Finding.RecommendedValue.Split(";")
+                        $ListRecommendedSid = @()
+
+                        # SID Translation
+                        ForEach ($AccountName in $ListRecommended) {
+                            $AccountSid = Translate-SidFromWellkownAccount -AccountName $AccountName
+                            $ListRecommendedSid += $AccountSid                            
+                        }
+                        # Sort SID List
+                        $ListRecommendedSid = $ListRecommendedSid | Sort-Object
+                        
+                        # Build String
+                        ForEach ($AccountName in $ListRecommendedSid) {
+                            [String] $RecommendedValueSid += $AccountName+";"
+                        }                
+
+                        $RecommendedValueSid = $RecommendedValueSid -replace ".$"
+                        $Finding.RecommendedValue = $RecommendedValueSid
+                        Clear-Variable -Name ("RecommendedValueSid")
+                    }
+                }
  
                 $ResultPassed = $false
                 Switch($Finding.Operator) {
@@ -1045,7 +1212,29 @@
                     ">=" { try { If ([int]$Result -ge [int]$Finding.RecommendedValue) { $ResultPassed = $true }} catch { $ResultPassed = $false }; Break}
                     "contains" { If ($Result.Contains($Finding.RecommendedValue)) { $ResultPassed = $true }; Break}
                     "!="  { If ([string] $Result -ne $Finding.RecommendedValue) { $ResultPassed = $true }; Break}
+                    "=|0" { try { If ([string]$Result -eq $Finding.RecommendedValue -or $Result.Length -eq 0) { $ResultPassed = $true }} catch { $ResultPassed = $false }; Break}
                 }
+
+                #
+                # Restore Result after SID translation
+                # The results are already available as SID, for better readability they are translated into their names
+                #
+                If ($Finding.Method -eq 'accesschk') {
+
+                    If ($Result -ne "") {
+
+                        $ListResult = $Result.Split(";")
+                        ForEach ($AccountSid in $ListResult) {
+                            $AccountName = Get-AccountFromSid -AccountSid $AccountSid
+                            [String] $ResultName += $AccountName.Trim()+";"
+                        }
+                        $ResultName = $ResultName -replace ".$"
+                        $Result = $ResultName
+                        Clear-Variable -Name ("ResultName")
+                    }
+                                        
+                    $Finding.RecommendedValue = $SaveRecommendedValue
+                }                
 
                 If ($ResultPassed) {
 

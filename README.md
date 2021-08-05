@@ -1,6 +1,6 @@
 # HardeningKitty
 
-This is the stable version of Hardening Kitty from the [Windows Hardening Project by Michael Schneider](https://github.com/0x6d69636b/windows_hardening).
+This is the stable version of _HardeningKitty_ from the [Windows Hardening Project by Michael Schneider](https://github.com/0x6d69636b/windows_hardening). The stable version of _HardeningKitty_ is signed with the code signing certificate of _scip AG_.
 
 _HardeningKitty_ supports hardening of a Windows system. The configuration of the system is retrieved and assessed using a finding list. In addition, the system can be hardened according to predefined values. _HardeningKitty_ reads settings from the registry and uses other modules to read configurations outside the registry.
 

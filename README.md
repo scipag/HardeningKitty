@@ -74,7 +74,7 @@ Invoke-HardeningKitty -FileFindingList .\lists\finding_list_0x6d69636b_user.csv 
 HardeningKitty ready only the setting with the default list, and saves the results in a specific file
 
 ```powershell
-Invoke-HardeningKitty -Mode Config -Report -Report C:\tmp\my_hardeningkitty_report.log
+Invoke-HardeningKitty -Mode Config -Report -ReportFile C:\tmp\my_hardeningkitty_report.log
 ```
 
 ### Backup
@@ -158,6 +158,7 @@ HardeningKitty can be used to audit systems against the following baselines / be
 | DoD Windows Firewall STIG | 20H2 | v1r7 |
 | Microsoft Security baseline for Microsoft Edge | 87 | Final |
 | Microsoft Security baseline for Microsoft Edge | 88, 89, 90, 91 | Final |
+| Microsoft Security baseline for Microsoft Edge | 92 | Final |
 | Microsoft Security baseline for Windows 10 | 2004 | Final |
 | Microsoft Security baseline for Windows 10 | 20H2, 21H1 | Final |
 | Microsoft Security baseline for Windows Server (DC) | 2004 | Final |

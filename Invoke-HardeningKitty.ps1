@@ -491,7 +491,7 @@
     #
     # Start Main
     #
-    $HardeningKittyVersion = "0.6.1-1628003775"
+    $HardeningKittyVersion = "0.6.1-1629520511"
 
     #
     # Log, report and backup file
@@ -1669,7 +1669,7 @@
                 # Basically this is true, but there is an exception for the finding "MitigationOptions_FontBocking",
                 # the value "10000000000" is written to the registry as a string
                 #
-                If ($Finding.RegistryItem -eq "MitigationOptions_FontBocking") {
+                If ($Finding.RegistryItem -eq "MitigationOptions_FontBocking" -Or $Finding.RegistryItem -eq "Retention") {
                     $RegType = "String"
                 } ElseIf ($Finding.RecommendedValue -match "^\d+$") {
                     $RegType = "DWord"                    
@@ -2048,8 +2048,8 @@
 # SIG # Begin signature block
 # MIIO6AYJKoZIhvcNAQcCoIIO2TCCDtUCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU9rxIjDJZdMSjJULCaYTe2cOe
-# i0WgggwKMIIF4DCCBMigAwIBAgIQeO1YDfU4t32dWmgwBkYSEDANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU/FLP+X9ZMZeRHMvbShTR4rqN
+# 71mgggwKMIIF4DCCBMigAwIBAgIQeO1YDfU4t32dWmgwBkYSEDANBgkqhkiG9w0B
 # AQsFADCBkTELMAkGA1UEBhMCR0IxGzAZBgNVBAgTEkdyZWF0ZXIgTWFuY2hlc3Rl
 # cjEQMA4GA1UEBxMHU2FsZm9yZDEaMBgGA1UEChMRQ09NT0RPIENBIExpbWl0ZWQx
 # NzA1BgNVBAMTLkNPTU9ETyBSU0EgRXh0ZW5kZWQgVmFsaWRhdGlvbiBDb2RlIFNp
@@ -2119,11 +2119,11 @@
 # eHRlbmRlZCBWYWxpZGF0aW9uIENvZGUgU2lnbmluZyBDQQIQeO1YDfU4t32dWmgw
 # BkYSEDAJBgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIBDDEKMAigAoAAoQKAADAZBgkq
 # hkiG9w0BCQMxDAYKKwYBBAGCNwIBBDAcBgorBgEEAYI3AgELMQ4wDAYKKwYBBAGC
-# NwIBFTAjBgkqhkiG9w0BCQQxFgQUvF9MLdbCcfADSHMSTctdE46iD5IwDQYJKoZI
-# hvcNAQEBBQAEggEAaPPpncrqA4Y8QAR94S9crxR0Nqpt2FmKhAcEQPBoXS+y37zn
-# AImI6EtNQ6zKtdObSDoulpDKKgluCuFEr7BlWeYS0+3yv+RI8XGcDz9eabhG92vP
-# Wa472+mwcW5C+Rk3gaoGZ8fkT2WfclqWdlRS++4RWSRGXw0nYQioTJt9PizUZB2m
-# CFqKHdfucHvysZuTMeprNDLUnC1K9S4sJLVC/Y22xKKSRxl6GF6N2gK/JTGQGVpX
-# CkkP1cyeAmp3hOMG6D+SmW+xC/4nJJ9BKEI64BilX+XmaLSI1ANXa+B3e8LCB4LX
-# jYhus6STGqMA7rKmwq8pDvGaAxlQxft3V7LJnA==
+# NwIBFTAjBgkqhkiG9w0BCQQxFgQUsHavTQ/XQCKyvfdLsOITTQaqH4UwDQYJKoZI
+# hvcNAQEBBQAEggEAd90Id5kd77go9xvmcj7mOCFSVkpFOijUyp4Tfh4zQfbj7Lg0
+# yoyB28bdOKAvzS/C75tIuucDpwl1uKo366YGtBWoJJTn90BUIByFomyCDXpDBii8
+# 1q1KPsRJuLNsmtjqw2oV65/9Hy1ITQxobvL9Vr9Faa6vBS1bp6ji5OlwhVMU+DJA
+# lvjjxyDKUae7pGA7HRAtTBFdd2Rl8T5LvAPKLBgEkM5EVUO1EHWtMzHxdaTPIgp8
+# Mp/8en0KcY2R9n3tyVMy5mRZQ62hjR/QC4BGK5Tp05G1qoj+3IS5ww6vJjY/+XOr
+# LbY76IxnMeveLGhR552kuzgM4tDTT5sHvrASGg==
 # SIG # End signature block

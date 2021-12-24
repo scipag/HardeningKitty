@@ -107,7 +107,11 @@
 
         # Skip machine information, useful when debugging
         [Switch]
-        $SkipMachineInformation = $false,        
+        $SkipMachineInformation = $false,
+
+        # Skip language warning, if you understand the risk 
+        [Switch]
+        $SkipLanguageWarning = $false,             
 
         # Define name and path of the log file
         [String]
@@ -491,7 +495,7 @@
     #
     # Start Main
     #
-    $HardeningKittyVersion = "0.6.1-1629520511"
+    $HardeningKittyVersion = "0.7.0-1640190489"
 
     #
     # Log, report and backup file
@@ -499,6 +503,8 @@
     $Hostname = $env:COMPUTERNAME.ToLower()
     $FileDate = Get-Date -Format yyyyMMdd-HHmmss
     $ListName = [System.IO.Path]::GetFileNameWithoutExtension($FileFindingList)
+    $WinSystemLocale = Get-WinSystemLocale
+    $PowerShellVersion = "$($PSVersionTable.PSVersion.Major).$($PSVersionTable.PSVersion.Minor)"
 
     If ($Log.IsPresent -and $LogFile.Length -eq 0) {
         $LogFile = "hardeningkitty_log_"+$Hostname+"_"+$ListName+"-$FileDate.log"
@@ -541,30 +547,94 @@
     # Machine information
     #
     If (-not($SkipMachineInformation)) {
+
         Write-Output "`n" 
         Write-ProtocolEntry -Text "Getting machine information" -LogLevel "Info"
-        $MachineInformation = Get-ComputerInfo
 
-        $Message = "Hostname: "+$MachineInformation.CsDNSHostName
-        Write-ProtocolEntry -Text $Message -LogLevel "Notime"
-        $Message = "Domain: "+$MachineInformation.CsDomain
-        Write-ProtocolEntry -Text $Message -LogLevel "Notime"
-        $Message = "Domain role: "+$MachineInformation.CsDomainRole
-        Write-ProtocolEntry -Text $Message -LogLevel "Notime"
-        $Message = "Install date: "+$MachineInformation.OsInstallDate
-        Write-ProtocolEntry -Text $Message -LogLevel "Notime"
-        $Message = "Last Boot Time: "+$MachineInformation.OsLastBootUpTime
-        Write-ProtocolEntry -Text $Message -LogLevel "Notime"
-        $Message = "Uptime: "+$MachineInformation.OsUptime
-        Write-ProtocolEntry -Text $Message -LogLevel "Notime"
-        $Message = "Windows: "+$MachineInformation.WindowsProductName
-        Write-ProtocolEntry -Text $Message -LogLevel "Notime"
-        $Message = "Windows edition: "+$MachineInformation.WindowsEditionId
-        Write-ProtocolEntry -Text $Message -LogLevel "Notime"
-        $Message = "Windows version: "+$MachineInformation.WindowsVersion
-        Write-ProtocolEntry -Text $Message -LogLevel "Notime"
-        $Message = "Windows build: "+$MachineInformation.WindowsBuildLabEx
-        Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+        #
+        # The Get-ComputerInfo cmdlet gets a consolidated object of system
+        # and operating system properties. This cmdlet was introduced in Windows PowerShell 5.1.
+        #
+        If ($PowerShellVersion -le 5.0) {
+
+            try {
+
+                $OperatingSystem = Get-CimInstance Win32_operatingsystem
+                $ComputerSystem = Get-CimInstance Win32_ComputerSystem
+                Switch ($ComputerSystem.domainrole) {
+                    "0" { $Domainrole = "Standalone Workstation"; Break}
+                    "1" { $Domainrole = "Member Workstation"; Break}
+                    "2" { $Domainrole = "Standalone Server"; Break}
+                    "3" { $Domainrole = "Member Server"; Break}
+                    "4" { $Domainrole = "Backup Domain Controller"; Break}
+                    "5" { $Domainrole = "Primary Domain Controller"; Break}
+                }
+                $Uptime = (Get-Date) - $OperatingSystem.LastBootUpTime
+
+                $Message = "Hostname: "+$OperatingSystem.CSName
+                Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+                $Message = "Domain: "+$ComputerSystem.Domain
+                Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+                $Message = "Domain role: "+$Domainrole
+                Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+                $Message = "Install date: "+$OperatingSystem.InstallDate
+                Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+                $Message = "Last Boot Time: "+$OperatingSystem.LastBootUpTime
+                Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+                $Message = "Uptime: "+$Uptime
+                Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+                $Message = "Windows: "+$OperatingSystem.Caption
+                Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+                $Message = "Windows version: "+$OperatingSystem.Version
+                Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+                $Message = "Windows build: "+$OperatingSystem.BuildNumber
+                Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+                $Message = "System-locale: "+$WinSystemLocale.Name
+                Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+                $Message = "Powershell Version: "+$PowerShellVersion
+                Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+            } catch {
+                Write-ProtocolEntry -Text "Getting machine information failed." -LogLevel "Warning"
+            }
+        }
+        Else {
+
+            $MachineInformation = Get-ComputerInfo
+            $Message = "Hostname: "+$MachineInformation.CsDNSHostName
+            Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+            $Message = "Domain: "+$MachineInformation.CsDomain
+            Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+            $Message = "Domain role: "+$MachineInformation.CsDomainRole
+            Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+            $Message = "Install date: "+$MachineInformation.OsInstallDate
+            Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+            $Message = "Last Boot Time: "+$MachineInformation.OsLastBootUpTime
+            Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+            $Message = "Uptime: "+$MachineInformation.OsUptime
+            Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+            $Message = "Windows: "+$MachineInformation.WindowsProductName
+            Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+            $Message = "Windows edition: "+$MachineInformation.WindowsEditionId
+            Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+            $Message = "Windows version: "+$MachineInformation.WindowsVersion
+            Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+            $Message = "Windows build: "+$MachineInformation.WindowsBuildLabEx
+            Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+            $Message = "System-locale: "+$WinSystemLocale.Name
+            Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+            $Message = "Powershell Version: "+$PowerShellVersion
+            Write-ProtocolEntry -Text $Message -LogLevel "Notime"
+        }
+    }
+
+    #
+    # Warning for non-english systems
+    #
+    If ($WinSystemLocale.Name -ne "en-US" -and -not($SkipLanguageWarning)) {
+        Write-Output "`n"
+        Write-ProtocolEntry -Text "Language warning" -LogLevel "Info"
+        $Message = "HardeningKitty was developed for the system language 'en-US'. This system uses '"+$WinSystemLocale.Name+"' Language-dependent analyses can sometimes produce false results. Please create an issue if this occurs."
+        Write-ProtocolEntry -Text $Message -LogLevel "Warning"
     }
 
     #
@@ -736,12 +806,30 @@
                 try {
 
                     $SubCategory = $Finding.MethodArgument
-                    $ResultOutput = &$BinaryAuditpol /get /subcategory:"$SubCategory"
-                    
-                    # "Parse" auditpol.exe output
-                    $ResultOutput[4] -match '  ([a-z, /-]+)  ([a-z, ]+)' | Out-Null
-                    $Result = $Matches[2]
 
+                    # auditpol.exe does not write a backup in an existing file, so we have to build a name instead of create one    
+                    $TempFileName = [System.IO.Path]::GetTempPath()+"HardeningKitty_auditpol-"+$(Get-Date -Format yyyyMMdd-HHmmss)+".csv"
+                    &$BinaryAuditpol /backup /file:$TempFileName > $null
+
+                    $ResultOutputLoad = Get-Content $TempFileName                    
+                    foreach ($line in $ResultOutputLoad){
+                        $table = $line.Split(",")
+                        if ($table[3] -eq $SubCategory){
+                            
+                            # Translate setting value (works only for English list, so this is workaround)
+                            Switch ($table[6]) {
+                              "0" { $Result = "No Auditing"; Break}
+                              "1" { $Result = "Success"; Break}
+                              "2" { $Result = "Failure"; Break}
+                              "3" { $Result = "Success and Failure"; Break}
+                            }
+                        }
+                    }
+
+                    # House cleaning
+                    Remove-Item $TempFileName
+                    Clear-Variable -Name ("ResultOutputLoad", "table")
+                    
                 } catch {
                     $Result = $Finding.DefaultValue
                 }
@@ -1461,7 +1549,7 @@
 
                 $Result = Invoke-Expression $ResultCommand
 
-                if($LastExitCode -eq 1) {
+                if($LastExitCode -eq 0) {
                     $ResultText = "Method value modified"
                     $Message = "ID "+$Finding.ID+", "+$Finding.MethodArgument+", " + $ResultText
                     $MessageSeverity = "Passed"
@@ -1952,6 +2040,79 @@
                     Add-MessageToFile -Text $Message -File $ReportFile
                 }
             }
+
+            #
+            # bcdedit
+            # Force use of Data Execution Prevention, if it is not already set
+            #
+            If ($Finding.Method -eq 'bcdedit') {
+
+                # Check if the user has admin rights, skip test if not
+                If (-not($IsAdmin)) {
+                    $StatsError++
+                    $Message = "ID "+$Finding.ID+", "+$Finding.Name+", Method "+$Finding.Method+" requires admin priviliges. Test skipped."
+                    Write-ProtocolEntry -Text $Message -LogLevel "Error"
+                    Continue
+                }
+
+                # Check if binary is available, skip test if not
+                $BinaryBcdedit = "C:\Windows\System32\bcdedit.exe"
+                If (-Not (Test-Path $BinaryBcdedit)) {
+                    $StatsError++
+                    $Message = "ID "+$Finding.ID+", "+$Finding.Name+", Method "+$Finding.Method+" requires bcdedit, and the binary for bcdedit was not found. Test skipped."
+                    Write-ProtocolEntry -Text $Message -LogLevel "Error"
+                    Continue
+                }
+
+                try {
+
+                    $ResultOutput = &$BinaryBcdedit
+                    $ResultOutput = $ResultOutput | Where-Object { $_ -like "*"+$Finding.RecommendedValue+"*" }
+
+                    If ($ResultOutput -match ' ([a-z,A-Z]+)') {
+                        $Result = $Matches[1]
+                    } Else {
+                        $Result = $Finding.DefaultValue
+                    }
+
+                } catch {
+                    $Result = $Finding.DefaultValue
+                }
+
+                If ($Result -ne $Finding.RecommendedValue) {
+
+                    try {
+
+                        $ResultOutput = &$BinaryBcdedit "/set" $Finding.MethodArgument $Finding.RecommendedValue
+
+                    } catch {
+
+                        $ResultText = "Setting could not be enabled" 
+                        $Message = "ID "+$Finding.ID+", "+$Finding.Name+", " + $ResultText
+                        $MessageSeverity = "High"
+                    }
+
+                    $ResultText = "Setting enabled. Please restart the system to activate it" 
+                    $Message = "ID "+$Finding.ID+", "+$Finding.Name+", " + $ResultText
+                    $MessageSeverity = "Passed"
+                } Else {
+
+                    $ResultText = "Setting is already set correct" 
+                    $Message = "ID "+$Finding.ID+", "+$Finding.Name+", " + $ResultText
+                    $MessageSeverity = "Passed"
+                }
+
+                Write-ResultEntry -Text $Message -SeverityLevel $MessageSeverity
+
+                If ($Log) {
+                    Add-MessageToFile -Text $Message -File $LogFile
+                }
+                
+                If ($Report) {
+                    $Message = '"'+$Finding.ID+'","'+$Finding.Name+'","'+$ResultText+'"'
+                    Add-MessageToFile -Text $Message -File $ReportFile
+                }
+            }
         }
         
         #
@@ -2046,10 +2207,10 @@
 }
 
 # SIG # Begin signature block
-# MIIO6AYJKoZIhvcNAQcCoIIO2TCCDtUCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
+# MIIgMwYJKoZIhvcNAQcCoIIgJDCCICACAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU/FLP+X9ZMZeRHMvbShTR4rqN
-# 71mgggwKMIIF4DCCBMigAwIBAgIQeO1YDfU4t32dWmgwBkYSEDANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUIxs5BiXur93HIe9vhb4eVz05
+# EtOgghoFMIIF4DCCBMigAwIBAgIQeO1YDfU4t32dWmgwBkYSEDANBgkqhkiG9w0B
 # AQsFADCBkTELMAkGA1UEBhMCR0IxGzAZBgNVBAgTEkdyZWF0ZXIgTWFuY2hlc3Rl
 # cjEQMA4GA1UEBxMHU2FsZm9yZDEaMBgGA1UEChMRQ09NT0RPIENBIExpbWl0ZWQx
 # NzA1BgNVBAMTLkNPTU9ETyBSU0EgRXh0ZW5kZWQgVmFsaWRhdGlvbiBDb2RlIFNp
@@ -2113,17 +2274,109 @@
 # sJ/jw4s6h57nVdPTbTQXMA1oIgvVue1zNXLD7ac3zeNDrkXNNL8oyodi7UOkr/rL
 # McshWGFGXrbGeqYeUyqo+FxRHzpaEA8owOR0i3TGBKr4SyYoCjKJ250qYHFqw5ZO
 # Frljv2GVZ4xLLruwToPpTTHljici9Twme0SR09Ra8NN89Di+FJqZDouxW+rkiw8R
-# nXdCghxcOtTaq4gvjVcwVDGCAkgwggJEAgEBMIGmMIGRMQswCQYDVQQGEwJHQjEb
-# MBkGA1UECBMSR3JlYXRlciBNYW5jaGVzdGVyMRAwDgYDVQQHEwdTYWxmb3JkMRow
-# GAYDVQQKExFDT01PRE8gQ0EgTGltaXRlZDE3MDUGA1UEAxMuQ09NT0RPIFJTQSBF
-# eHRlbmRlZCBWYWxpZGF0aW9uIENvZGUgU2lnbmluZyBDQQIQeO1YDfU4t32dWmgw
-# BkYSEDAJBgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIBDDEKMAigAoAAoQKAADAZBgkq
-# hkiG9w0BCQMxDAYKKwYBBAGCNwIBBDAcBgorBgEEAYI3AgELMQ4wDAYKKwYBBAGC
-# NwIBFTAjBgkqhkiG9w0BCQQxFgQUsHavTQ/XQCKyvfdLsOITTQaqH4UwDQYJKoZI
-# hvcNAQEBBQAEggEAd90Id5kd77go9xvmcj7mOCFSVkpFOijUyp4Tfh4zQfbj7Lg0
-# yoyB28bdOKAvzS/C75tIuucDpwl1uKo366YGtBWoJJTn90BUIByFomyCDXpDBii8
-# 1q1KPsRJuLNsmtjqw2oV65/9Hy1ITQxobvL9Vr9Faa6vBS1bp6ji5OlwhVMU+DJA
-# lvjjxyDKUae7pGA7HRAtTBFdd2Rl8T5LvAPKLBgEkM5EVUO1EHWtMzHxdaTPIgp8
-# Mp/8en0KcY2R9n3tyVMy5mRZQ62hjR/QC4BGK5Tp05G1qoj+3IS5ww6vJjY/+XOr
-# LbY76IxnMeveLGhR552kuzgM4tDTT5sHvrASGg==
+# nXdCghxcOtTaq4gvjVcwVDCCBuwwggTUoAMCAQICEDAPb6zdZph0fKlGNqd4Lbkw
+# DQYJKoZIhvcNAQEMBQAwgYgxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpOZXcgSmVy
+# c2V5MRQwEgYDVQQHEwtKZXJzZXkgQ2l0eTEeMBwGA1UEChMVVGhlIFVTRVJUUlVT
+# VCBOZXR3b3JrMS4wLAYDVQQDEyVVU0VSVHJ1c3QgUlNBIENlcnRpZmljYXRpb24g
+# QXV0aG9yaXR5MB4XDTE5MDUwMjAwMDAwMFoXDTM4MDExODIzNTk1OVowfTELMAkG
+# A1UEBhMCR0IxGzAZBgNVBAgTEkdyZWF0ZXIgTWFuY2hlc3RlcjEQMA4GA1UEBxMH
+# U2FsZm9yZDEYMBYGA1UEChMPU2VjdGlnbyBMaW1pdGVkMSUwIwYDVQQDExxTZWN0
+# aWdvIFJTQSBUaW1lIFN0YW1waW5nIENBMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
+# MIICCgKCAgEAyBsBr9ksfoiZfQGYPyCQvZyAIVSTuc+gPlPvs1rAdtYaBKXOR4O1
+# 68TMSTTL80VlufmnZBYmCfvVMlJ5LsljwhObtoY/AQWSZm8hq9VxEHmH9EYqzcRa
+# ydvXXUlNclYP3MnjU5g6Kh78zlhJ07/zObu5pCNCrNAVw3+eolzXOPEWsnDTo8Tf
+# s8VyrC4Kd/wNlFK3/B+VcyQ9ASi8Dw1Ps5EBjm6dJ3VV0Rc7NCF7lwGUr3+Az9ER
+# CleEyX9W4L1GnIK+lJ2/tCCwYH64TfUNP9vQ6oWMilZx0S2UTMiMPNMUopy9Jv/T
+# UyDHYGmbWApU9AXn/TGs+ciFF8e4KRmkKS9G493bkV+fPzY+DjBnK0a3Na+WvtpM
+# YMyou58NFNQYxDCYdIIhz2JWtSFzEh79qsoIWId3pBXrGVX/0DlULSbuRRo6b83X
+# hPDX8CjFT2SDAtT74t7xvAIo9G3aJ4oG0paH3uhrDvBbfel2aZMgHEqXLHcZK5OV
+# mJyXnuuOwXhWxkQl3wYSmgYtnwNe/YOiU2fKsfqNoWTJiJJZy6hGwMnypv99V9sS
+# dvqKQSTUG/xypRSi1K1DHKRJi0E5FAMeKfobpSKupcNNgtCN2mu32/cYQFdz8HGj
+# +0p9RTbB942C+rnJDVOAffq2OVgy728YUInXT50zvRq1naHelUF6p4MCAwEAAaOC
+# AVowggFWMB8GA1UdIwQYMBaAFFN5v1qqK0rPVIDh2JvAnfKyA2bLMB0GA1UdDgQW
+# BBQaofhhGSAPw0F3RSiO0TVfBhIEVTAOBgNVHQ8BAf8EBAMCAYYwEgYDVR0TAQH/
+# BAgwBgEB/wIBADATBgNVHSUEDDAKBggrBgEFBQcDCDARBgNVHSAECjAIMAYGBFUd
+# IAAwUAYDVR0fBEkwRzBFoEOgQYY/aHR0cDovL2NybC51c2VydHJ1c3QuY29tL1VT
+# RVJUcnVzdFJTQUNlcnRpZmljYXRpb25BdXRob3JpdHkuY3JsMHYGCCsGAQUFBwEB
+# BGowaDA/BggrBgEFBQcwAoYzaHR0cDovL2NydC51c2VydHJ1c3QuY29tL1VTRVJU
+# cnVzdFJTQUFkZFRydXN0Q0EuY3J0MCUGCCsGAQUFBzABhhlodHRwOi8vb2NzcC51
+# c2VydHJ1c3QuY29tMA0GCSqGSIb3DQEBDAUAA4ICAQBtVIGlM10W4bVTgZF13wN6
+# MgstJYQRsrDbKn0qBfW8Oyf0WqC5SVmQKWxhy7VQ2+J9+Z8A70DDrdPi5Fb5WEHP
+# 8ULlEH3/sHQfj8ZcCfkzXuqgHCZYXPO0EQ/V1cPivNVYeL9IduFEZ22PsEMQD43k
+# +ThivxMBxYWjTMXMslMwlaTW9JZWCLjNXH8Blr5yUmo7Qjd8Fng5k5OUm7Hcsm1B
+# bWfNyW+QPX9FcsEbI9bCVYRm5LPFZgb289ZLXq2jK0KKIZL+qG9aJXBigXNjXqC7
+# 2NzXStM9r4MGOBIdJIct5PwC1j53BLwENrXnd8ucLo0jGLmjwkcd8F3WoXNXBWia
+# p8k3ZR2+6rzYQoNDBaWLpgn/0aGUpk6qPQn1BWy30mRa2Coiwkud8TleTN5IPZs0
+# lpoJX47997FSkc4/ifYcobWpdR9xv1tDXWU9UIFuq/DQ0/yysx+2mZYm9Dx5i1xk
+# zM3uJ5rloMAMcofBbk1a0x7q8ETmMm8c6xdOlMN4ZSA7D0GqH+mhQZ3+sbigZSo0
+# 4N6o+TzmwTC7wKBjLPxcFgCo0MR/6hGdHgbGpm0yXbQ4CStJB6r97DDa8acvz7f9
+# +tCjhNknnvsBZne5VhDhIG7GrrH5trrINV0zdo7xfCAMKneutaIChrop7rRaALGM
+# q+P5CslUXdS5anSevUiumDCCBwcwggTvoAMCAQICEQCMd6AAj/TRsMY9nzpIg41r
+# MA0GCSqGSIb3DQEBDAUAMH0xCzAJBgNVBAYTAkdCMRswGQYDVQQIExJHcmVhdGVy
+# IE1hbmNoZXN0ZXIxEDAOBgNVBAcTB1NhbGZvcmQxGDAWBgNVBAoTD1NlY3RpZ28g
+# TGltaXRlZDElMCMGA1UEAxMcU2VjdGlnbyBSU0EgVGltZSBTdGFtcGluZyBDQTAe
+# Fw0yMDEwMjMwMDAwMDBaFw0zMjAxMjIyMzU5NTlaMIGEMQswCQYDVQQGEwJHQjEb
+# MBkGA1UECBMSR3JlYXRlciBNYW5jaGVzdGVyMRAwDgYDVQQHEwdTYWxmb3JkMRgw
+# FgYDVQQKEw9TZWN0aWdvIExpbWl0ZWQxLDAqBgNVBAMMI1NlY3RpZ28gUlNBIFRp
+# bWUgU3RhbXBpbmcgU2lnbmVyICMyMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIIC
+# CgKCAgEAkYdLLIvB8R6gntMHxgHKUrC+eXldCWYGLS81fbvA+yfaQmpZGyVM6u9A
+# 1pp+MshqgX20XD5WEIE1OiI2jPv4ICmHrHTQG2K8P2SHAl/vxYDvBhzcXk6Th7ia
+# 3kwHToXMcMUNe+zD2eOX6csZ21ZFbO5LIGzJPmz98JvxKPiRmar8WsGagiA6t+/n
+# 1rglScI5G4eBOcvDtzrNn1AEHxqZpIACTR0FqFXTbVKAg+ZuSKVfwYlYYIrv8azN
+# h2MYjnTLhIdBaWOBvPYfqnzXwUHOrat2iyCA1C2VB43H9QsXHprl1plpUcdOpp0p
+# b+d5kw0yY1OuzMYpiiDBYMbyAizE+cgi3/kngqGDUcK8yYIaIYSyl7zUr0QcloIi
+# lSqFVK7x/T5JdHT8jq4/pXL0w1oBqlCli3aVG2br79rflC7ZGutMJ31MBff4I13E
+# V8gmBXr8gSNfVAk4KmLVqsrf7c9Tqx/2RJzVmVnFVmRb945SD2b8mD9EBhNkbunh
+# FWBQpbHsz7joyQu+xYT33Qqd2rwpbD1W7b94Z7ZbyF4UHLmvhC13ovc5lTdvTn8c
+# xjwE1jHFfu896FF+ca0kdBss3Pl8qu/CdkloYtWL9QPfvn2ODzZ1RluTdsSD7oK+
+# LK43EvG8VsPkrUPDt2aWXpQy+qD2q4lQ+s6g8wiBGtFEp8z3uDECAwEAAaOCAXgw
+# ggF0MB8GA1UdIwQYMBaAFBqh+GEZIA/DQXdFKI7RNV8GEgRVMB0GA1UdDgQWBBRp
+# dTd7u501Qk6/V9Oa258B0a7e0DAOBgNVHQ8BAf8EBAMCBsAwDAYDVR0TAQH/BAIw
+# ADAWBgNVHSUBAf8EDDAKBggrBgEFBQcDCDBABgNVHSAEOTA3MDUGDCsGAQQBsjEB
+# AgEDCDAlMCMGCCsGAQUFBwIBFhdodHRwczovL3NlY3RpZ28uY29tL0NQUzBEBgNV
+# HR8EPTA7MDmgN6A1hjNodHRwOi8vY3JsLnNlY3RpZ28uY29tL1NlY3RpZ29SU0FU
+# aW1lU3RhbXBpbmdDQS5jcmwwdAYIKwYBBQUHAQEEaDBmMD8GCCsGAQUFBzAChjNo
+# dHRwOi8vY3J0LnNlY3RpZ28uY29tL1NlY3RpZ29SU0FUaW1lU3RhbXBpbmdDQS5j
+# cnQwIwYIKwYBBQUHMAGGF2h0dHA6Ly9vY3NwLnNlY3RpZ28uY29tMA0GCSqGSIb3
+# DQEBDAUAA4ICAQBKA3iQQjPsexqDCTYzmFW7nUAGMGtFavGUDhlQ/1slXjvhOcRb
+# uumVkDc3vd/7ZOzlgreVzFdVcEtO9KiH3SKFple7uCEn1KAqMZSKByGeir2nGvUC
+# FctEUJmM7D66A3emggKQwi6Tqb4hNHVjueAtD88BN8uNovq4WpquoXqeE5MZVY8J
+# kC7f6ogXFutp1uElvUUIl4DXVCAoT8p7s7Ol0gCwYDRlxOPFw6XkuoWqemnbdaQ+
+# eWiaNotDrjbUYXI8DoViDaBecNtkLwHHwaHHJJSjsjxusl6i0Pqo0bglHBbmwNV/
+# aBrEZSk1Ki2IvOqudNaC58CIuOFPePBcysBAXMKf1TIcLNo8rDb3BlKao0AwF7Ap
+# FpnJqreISffoCyUztT9tr59fClbfErHD7s6Rd+ggE+lcJMfqRAtK5hOEHE3rDbW4
+# hqAwp4uhn7QszMAWI8mR5UIDS4DO5E3mKgE+wF6FoCShF0DV29vnmBCk8eoZG4BU
+# +keJ6JiBqXXADt/QaJR5oaCejra3QmbL2dlrL03Y3j4yHiDk7JxNQo2dxzOZgjdE
+# 1CYpJkCOeC+57vov8fGP/lC4eN0Ult4cDnCwKoVqsWxo6SrkECtuIf3TfJ035CoG
+# 1sPx12jjTwd5gQgT/rJkXumxPObQeCOyCSziJmK/O6mXUczHRDKBsq/P3zGCBZgw
+# ggWUAgEBMIGmMIGRMQswCQYDVQQGEwJHQjEbMBkGA1UECBMSR3JlYXRlciBNYW5j
+# aGVzdGVyMRAwDgYDVQQHEwdTYWxmb3JkMRowGAYDVQQKExFDT01PRE8gQ0EgTGlt
+# aXRlZDE3MDUGA1UEAxMuQ09NT0RPIFJTQSBFeHRlbmRlZCBWYWxpZGF0aW9uIENv
+# ZGUgU2lnbmluZyBDQQIQeO1YDfU4t32dWmgwBkYSEDAJBgUrDgMCGgUAoHgwGAYK
+# KwYBBAGCNwIBDDEKMAigAoAAoQKAADAZBgkqhkiG9w0BCQMxDAYKKwYBBAGCNwIB
+# BDAcBgorBgEEAYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQU
+# 5vdRkm9FAxjUu+ovGe2kwgphaaEwDQYJKoZIhvcNAQEBBQAEggEAfKTA5UUMbBis
+# Q6b+cFGitSwtnX4VmSIq0hsbC3y+ZEAo74qysA1vNS7G6DJQx3Km1ikCOX6qhw2F
+# zuXVK3JEMgxuFTzn+9GtAA9QX0bUflWn2PR8WYDCexEez9h/tkN/oFI7PuoWZAtV
+# JZxk0dXEtApkoQdMTUCahQ3Ony+2ZKLPTC8CMOvWZKW9YpSB25DN+gskzofj+wHk
+# fQp8rl2Lk/eGBD686rbZMdIizI77SI0HPccmEsJ4qfy4y5fd8oArOUJUoFowR9ua
+# i93WMoAeSR+d5yd09N+hCsNfEV3k3JpBDhNyV5xati75NFY8pfz5zanPZsncFbYu
+# ZPrcaTCfBaGCA0wwggNIBgkqhkiG9w0BCQYxggM5MIIDNQIBATCBkjB9MQswCQYD
+# VQQGEwJHQjEbMBkGA1UECBMSR3JlYXRlciBNYW5jaGVzdGVyMRAwDgYDVQQHEwdT
+# YWxmb3JkMRgwFgYDVQQKEw9TZWN0aWdvIExpbWl0ZWQxJTAjBgNVBAMTHFNlY3Rp
+# Z28gUlNBIFRpbWUgU3RhbXBpbmcgQ0ECEQCMd6AAj/TRsMY9nzpIg41rMA0GCWCG
+# SAFlAwQCAgUAoHkwGAYJKoZIhvcNAQkDMQsGCSqGSIb3DQEHATAcBgkqhkiG9w0B
+# CQUxDxcNMjExMjI0MDkxMDUxWjA/BgkqhkiG9w0BCQQxMgQwu4GLYVumP1BVZv/Q
+# CP6c4yZrbO14RXkkVkUUnDepv1oVApCCgLGBjDVbj/Vaf+amMA0GCSqGSIb3DQEB
+# AQUABIICAExuDUibuyvfk7UBX0EHDnZQWl2MTq3sRxI6B0+cZY8qhy7Z5fNCrvWN
+# /toDDZ/Exk0l9yr12bogmUYB9tETGmpc8pCm0zVR9SaXAG1lo1Go+NAd5AJqMvIn
+# Iikz6tLYCAhWtiOGqoOk2AwtIwTO7APCPmylaOMa+AZILCHXETjrpNnjNIHI9lPI
+# KMHPNn/NPJpdhsuw1g+IlRXMqgOxewTjQ+IZyDEJQvACKicOexiP6k8xlIu+KADm
+# VgJrAInLfHBiaXTrRXUDjW0dlCRJykPP0EUNQEN4LeIKk2RGpyepYsvp0ZVnaf7L
+# ZnNahuDQXbZFNKxpy0BsGam27E3WlGhzmFs2k+IOkjYeTtdDrg+842oWFp5COrpG
+# Qet3yCaF/rwL0tcpP9YWDATSSOTj2ShJI+r/D6YZ2/qm3CTCL1vF1AdEGE90Zn/q
+# jMWiEhGq8BDRoEFMq/njx7bpeaR57mIlks7UsuhnaYvSmQJsKUd4PhhdFRO7rn+8
+# y9OqXtFFXs/YLYDK9AMwZx+iJTOlBngHp2aK6XZaqa6xaVEexqruqIAZ6xCTGw7o
+# PBrhTIZUapcMUygWBLKYpCg1NOGrHDwEzbMM7qydTDxFP1gwxWFoDutfGwIaag/I
+# Ggf7VaGhW95AsaWUBRhe0r/8Kknt6INIhP/zRaufyjxtozWNyvAy
 # SIG # End signature block

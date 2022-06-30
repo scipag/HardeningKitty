@@ -143,14 +143,24 @@ HardeningKitty can be used to audit systems against the following baselines / be
 | CIS Microsoft Windows 10 Enterprise (User) | 2004 | 1.9.1 |
 | CIS Microsoft Windows 10 Enterprise (Machine) | 20H2 | 1.10.1 |
 | CIS Microsoft Windows 10 Enterprise (User) | 20H2 | 1.10.1 |
+| CIS Microsoft Windows 10 Enterprise (Machine) | 21H1 | 1.11.0 |
+| CIS Microsoft Windows 10 Enterprise (User) | 21H1 | 1.11.0 |
+| CIS Microsoft Windows 10 Enterprise (Machine) | 21H2 | 1.12.0 |
+| CIS Microsoft Windows 10 Enterprise (User) | 21H2 | 1.12.0 |
+| CIS Microsoft Windows 11 Enterprise (Machine) | 21H2 | 1.0.0 |
+| CIS Microsoft Windows 11 Enterprise (User) | 21H2 | 1.0.0 |
 | CIS Microsoft Windows Server 2012 R2 (Machine) | R2 | 2.4.0 |
 | CIS Microsoft Windows Server 2012 R2 (User) | R2 | 2.4.0 |
 | CIS Microsoft Windows Server 2016 (Machine) | 1607 | 1.2.0 |
 | CIS Microsoft Windows Server 2016 (User) | 1607 | 1.2.0 |
+| CIS Microsoft Windows Server 2016 (Machine) | 1607 | 1.3.0 |
+| CIS Microsoft Windows Server 2016 (User) | 1607 | 1.3.0 |
 | CIS Microsoft Windows Server 2019 (Machine) | 1809 | 1.1.0 |
 | CIS Microsoft Windows Server 2019 (User) | 1809 | 1.1.0 |
-| CIS Microsoft Windows Server 2019 (Machine) | 1809 | 1.2.0 |
-| CIS Microsoft Windows Server 2019 (User) | 1809 | 1.2.0 |
+| CIS Microsoft Windows Server 2019 (Machine) | 1809 | 1.2.1 |
+| CIS Microsoft Windows Server 2019 (User) | 1809 | 1.2.1 |
+| CIS Microsoft Windows Server 2022 (Machine) | 21H2 | 1.0.0 |
+| CIS Microsoft Windows Server 2022 (User) | 21H2 | 1.0.0 |
 | DoD Microsoft Windows 10 STIG (Machine) | 20H2 | v2r1 |
 | DoD Microsoft Windows 10 STIG (User) | 20H2 | v2r1 |
 | DoD Windows Server 2019 Domain Controller STIG (Machine) | 20H2 | v2r1 |
@@ -165,6 +175,8 @@ HardeningKitty can be used to audit systems against the following baselines / be
 | Microsoft Security baseline for Microsoft Edge | 93, 94 | Final |
 | Microsoft Security baseline for Microsoft Edge | 95 | Final |
 | Microsoft Security baseline for Microsoft Edge | 96 | Final |
+| Microsoft Security baseline for Microsoft Edge | 97 | Final |
+| Microsoft Security baseline for Microsoft Edge | 98, 99, 100, 101, 102, 103 | Final |
 | Microsoft Security baseline for Windows 10 | 2004 | Final |
 | Microsoft Security baseline for Windows 10 | 20H2, 21H1 | Final |
 | Microsoft Security baseline for Windows 10 | 21H2 | Final |
@@ -181,5 +193,8 @@ HardeningKitty can be used to audit systems against the following baselines / be
 | Microsoft Security Baseline for Microsoft 365 Apps for enterprise (User) | v2104, v2106 | Final |
 | Microsoft Security Baseline for Microsoft 365 Apps for enterprise (Machine) | v2112 | Final |
 | Microsoft Security Baseline for Microsoft 365 Apps for enterprise (User) | v2112 | Final |
+| Microsoft Security Baseline for Microsoft 365 Apps for enterprise (Machine) | v2206 | Final |
+| Microsoft Security Baseline for Microsoft 365 Apps for enterprise (User) | v2206 | Final |
 | Microsoft Windows Server TLS Settings | 1809 | 1.0 |
 | Microsoft Windows Server TLS Settings (Future Use with TLSv1.3) | 1903 | 1.0 |
+

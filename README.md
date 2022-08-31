@@ -176,7 +176,7 @@ HardeningKitty can be used to audit systems against the following baselines / be
 | Microsoft Security baseline for Microsoft Edge | 95 | Final |
 | Microsoft Security baseline for Microsoft Edge | 96 | Final |
 | Microsoft Security baseline for Microsoft Edge | 97 | Final |
-| Microsoft Security baseline for Microsoft Edge | 98, 99, 100, 101, 102, 103 | Final |
+| Microsoft Security baseline for Microsoft Edge | 98, 99, 100, 101, 102, 103, 104 | Final |
 | Microsoft Security baseline for Windows 10 | 2004 | Final |
 | Microsoft Security baseline for Windows 10 | 20H2, 21H1 | Final |
 | Microsoft Security baseline for Windows 10 | 21H2 | Final |
@@ -197,4 +197,3 @@ HardeningKitty can be used to audit systems against the following baselines / be
 | Microsoft Security Baseline for Microsoft 365 Apps for enterprise (User) | v2206 | Final |
 | Microsoft Windows Server TLS Settings | 1809 | 1.0 |
 | Microsoft Windows Server TLS Settings (Future Use with TLSv1.3) | 1903 | 1.0 |
-

@@ -170,7 +170,11 @@
 
         # Use PowerShell ScriptBlock syntax to filter the finding list
         [scriptblock]
-        $Filter
+        $Filter,
+        
+        # Optional path to the list directory
+		[String]
+        $ListPath
     )
 
     Function Write-ProtocolEntry {
@@ -744,7 +748,11 @@
         If ($FileFindingList.Length -eq 0) {
 
             $CurrentLocation = $PSScriptRoot
-            $DefaultList = "$CurrentLocation\lists\finding_list_0x6d69636b_machine.csv"
+            If ($ListPath) {
+				$DefaultList = "$ListPath\finding_list_0x6d69636b_machine.csv"
+			} else {
+				$DefaultList = "$CurrentLocation\lists\finding_list_0x6d69636b_machine.csv"
+			}
 
             If (Test-Path -Path $DefaultList) {
                 $FileFindingList = $DefaultList
@@ -1564,7 +1572,11 @@
         If ($FileFindingList.Length -eq 0) {
 
             $CurrentLocation = $PSScriptRoot
-            $DefaultList = "$CurrentLocation\lists\finding_list_0x6d69636b_machine.csv"
+            If ($ListPath) {
+				$DefaultList = "$ListPath\finding_list_0x6d69636b_machine.csv"
+			} else {
+				$DefaultList = "$CurrentLocation\lists\finding_list_0x6d69636b_machine.csv"
+			}
 
             If (Test-Path -Path $DefaultList) {
                 $FileFindingList = $DefaultList

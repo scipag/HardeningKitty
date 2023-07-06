@@ -120,7 +120,7 @@
         $FileFindingList,
 
         # Choose mode, read system config, audit system config, harden system config
-        [ValidateSet("Audit", "Config", "HailMary")]
+        [ValidateSet("Audit", "Config", "HailMary", "GPO")]
         [String]
         $Mode = "Audit",
 
@@ -170,7 +170,11 @@
 
         # Use PowerShell ScriptBlock syntax to filter the finding list
         [scriptblock]
-        $Filter
+        $Filter,
+
+         # Define name of the GPO name
+        [String]
+        $GPOname
     )
 
     Function Write-ProtocolEntry {
@@ -545,7 +549,7 @@
         )
 
         $Script:StatsError++
-        $Message = "ID " + $FindingID + ", " + $FindingName + ", Method " + $FindingMethod + " requires admin priviliges. Test skipped."
+        $Message = "ID " + $FindingID + ", " + $FindingName + ", Method " + $FindingMethod + " requires admin privileges. Test skipped."
         Write-ProtocolEntry -Text $Message -LogLevel "Error"
     }
 
@@ -566,6 +570,30 @@
         Write-ProtocolEntry -Text $Message -LogLevel "Error"
     }
 
+    function ConvertToInt {
+        [CmdletBinding()]
+        Param (
+
+            [String]
+            $string
+        )
+        $int64 = $null
+        $int32 = $null
+
+        # Attempt to parse the string as an Int32
+        if ([Int32]::TryParse($string, [ref]$int32)) {
+            return $int32
+        }
+
+        # Attempt to parse the string as an Int64
+        if ([Int64]::TryParse($string, [ref]$int64)) {
+            return $int64
+        }
+
+        # If the string cannot be parsed as either an Int32 or an Int64, throw an error
+        throw "Cannot convert string '$string' to an integer."
+    }
+
     #
     # Binary Locations
     #
@@ -577,7 +605,7 @@
     #
     # Start Main
     #
-    $HardeningKittyVersion = "0.9.0-1670934249"
+    $HardeningKittyVersion = "0.9.1-1682943550"
 
     #
     # Log, report and backup file
@@ -795,11 +823,27 @@
 
                     try {
                         $Result = Get-ItemPropertyValue -Path $Finding.RegistryPath -Name $Finding.RegistryItem
+                        # Join the result with ";" character if result is an array
+                        if ($Result -is [system.array] -and ($Finding.RegistryItem -eq "Machine" -Or $Finding.RegistryItem -eq "EccCurves" -Or $Finding.RegistryItem -eq "NullSessionPipes")){
+                            $Result = $Result -join ";"
+                        }
                     } catch {
-                        $Result = $Finding.DefaultValue
+                        If ($Backup) {
+                            # If an error occurs and the backup mode is enabled, we consider that this policy does not exist
+                            # and put "-NODATA-" as result to identify it as non-existing policy
+                            $Result = "-NODATA-"
+                        } Else {
+                            $Result = $Finding.DefaultValue
+                        }
                     }
                 } Else {
-                    $Result = $Finding.DefaultValue
+                    If ($Backup) {
+                        # If this policy does not exist and the backup mode is enabled, we
+                        # put "-NODATA-" as result to identify it as non-existing policy
+                        $Result = "-NODATA-"
+                    } Else {
+                        $Result = $Finding.DefaultValue
+                    }
                 }
             }
 
@@ -862,14 +906,20 @@
                         If ($ResultList | Where-Object { $_ -like "*" + $Finding.RegistryItem + "*" }) {
                             $Result = $Finding.RegistryItem
                         } Else {
-                            $Result = "Not found"
+                            $Result = "-NODATA-"
                         }
 
                     } catch {
                         $Result = $Finding.DefaultValue
                     }
                 } Else {
-                    $Result = $Finding.DefaultValue
+                    If ($Backup) {
+                        # If this policy does not exist and the backup mode is enabled, we
+                        # put "-NODATA-" as result to identify it as non-existing policy
+                        $Result = "-NODATA-"
+                    } Else {
+                        $Result = $Finding.DefaultValue
+                    }
                 }
             }
 
@@ -1124,6 +1174,24 @@
 
                     $ResultOutput = $ExecutionContext.SessionState.LanguageMode
                     $Result = $ResultOutput
+
+                } catch {
+                    $Result = $Finding.DefaultValue
+                }
+            }
+
+            #
+            # Microsoft Defender Status
+            # The values are saved from a PowerShell function into an object.
+            # The desired arguments can be accessed directly.
+            #
+            ElseIf ($Finding.Method -eq 'MpComputerStatus') {
+
+                try {
+
+                    $ResultOutput = Get-MpComputerStatus
+                    $ResultArgument = $Finding.MethodArgument
+                    $Result = $ResultOutput.$ResultArgument
 
                 } catch {
                     $Result = $Finding.DefaultValue
@@ -1393,15 +1461,19 @@
                 #
                 If ($Finding.Method -eq 'Registry' -and $Finding.RegistryItem -eq "ASRRules") {
 
-                    $ResultAsr = $Result.Split("|")
-                    ForEach ($AsrRow in $ResultAsr) {
-                        $AsrRule = $AsrRow.Split("=")
-                        If ($AsrRule[0] -eq $Finding.MethodArgument) {
-                            $Result = $AsrRule[1]
-                            Break
-                        } Else {
+                    try {
+                        $ResultAsr = $Result.Split("|")
+                        ForEach ($AsrRow in $ResultAsr) {
+                            $AsrRule = $AsrRow.Split("=")
+                            If ($AsrRule[0] -eq $Finding.MethodArgument) {
+                                $Result = $AsrRule[1]
+                                Break
+                            } Else {
                             $Result = $Finding.DefaultValue
+                            }
                         }
+                    } catch {
+                        $Result = $Finding.DefaultValue
                     }
                 }
 
@@ -1412,7 +1484,7 @@
                     "<=" { try { If ([int]$Result -le [int]$Finding.RecommendedValue) { $ResultPassed = $true } } catch { $ResultPassed = $false }; Break }
                     "<=!0" { try { If ([int]$Result -le [int]$Finding.RecommendedValue -and [int]$Result -ne 0) { $ResultPassed = $true } } catch { $ResultPassed = $false }; Break }
                     ">=" { try { If ([int]$Result -ge [int]$Finding.RecommendedValue) { $ResultPassed = $true } } catch { $ResultPassed = $false }; Break }
-                    "contains" { If ($Result.Contains($Finding.RecommendedValue)) { $ResultPassed = $true }; Break }
+                    "contains" { If ($Result.ToString().Contains($Finding.RecommendedValue)) { $ResultPassed = $true }; Break }
                     "!="  { If ([string] $Result -ne $Finding.RecommendedValue) { $ResultPassed = $true }; Break }
                     "=|0" { try { If ([string]$Result -eq $Finding.RecommendedValue -or $Result.Length -eq 0) { $ResultPassed = $true } } catch { $ResultPassed = $false }; Break }
                 }
@@ -1505,9 +1577,9 @@
                     }
                 }
 
-                #
-                # Only return received value
-                #
+            #
+            # Only return received value
+            #
             } Elseif ($Mode -eq "Config") {
 
                 $Message = "ID " + $Finding.ID + "; " + $Finding.Name + "; Result=$Result"
@@ -1530,6 +1602,12 @@
                     $ReportAllResults += $ReportResult
                 }
                 If ($Backup) {
+
+                    # Do not save Firewall rules in the backup file, if they are not set
+                    If ( $Finding.Method -eq "FirewallRule" -and !$Result ) {
+                        Continue
+                    }
+
                     $BackupResult = [ordered] @{
                         ID = $Finding.ID
                         Category = $Finding.Category
@@ -1563,8 +1641,12 @@
         # A CSV finding list is imported
         If ($FileFindingList.Length -eq 0) {
 
-            $CurrentLocation = $PSScriptRoot
-            $DefaultList = "$CurrentLocation\lists\finding_list_0x6d69636b_machine.csv"
+            # No fallback to a default list anymore, just show an error message
+            # $CurrentLocation = $PSScriptRoot
+            # $DefaultList = "$CurrentLocation\lists\finding_list_0x6d69636b_machine.csv"
+            $Message = "No finding list has been specified - I'm sorry Dave, I'm afraid I can't do that. Please select a suitable list and specify it with the FileFindingList parameter. Select the finding list wisely and check beforehand whether the settings can affect the stability or the function of your system."
+            Write-ProtocolEntry -Text $Message -LogLevel "Error"
+            Continue
 
             If (Test-Path -Path $DefaultList) {
                 $FileFindingList = $DefaultList
@@ -1597,6 +1679,7 @@
             }
 
             Try {
+                Enable-ComputerRestore -Drive $Env:SystemDrive
                 Checkpoint-Computer -Description 'HardeningKitty' -RestorePointType 'MODIFY_SETTINGS' -ErrorAction Stop -WarningAction Stop
             } catch {
 
@@ -1640,6 +1723,36 @@
                     Continue
                 }
 
+                #
+                # Do not set/configure certain registry
+                # ASR rules configured with Intune (ASRRules, ASROnlyExclusions)
+                # Defender expections configured with Intune (ExcludedExtensions, ExcludedPaths, ExcludedProcesses)
+                #
+                If ($Finding.RegistryItem -eq "ASRRules" -Or $Finding.RegistryItem -eq "ASROnlyExclusions" -Or $Finding.RegistryItem -eq "ExcludedExtensions" -Or $Finding.RegistryItem -eq "ExcludedPaths" -Or $Finding.RegistryItem -eq "ExcludedProcesses") {
+                    $ResultText = "This setting is not configured by HardeningKitty"
+                    $Message = "ID " + $Finding.ID + ", " + $Finding.RegistryPath + ", " + $Finding.RegistryItem + ", " + $ResultText
+                    $MessageSeverity = "Passed"
+                    $TestResult = "Passed"
+                    Write-ResultEntry -Text $Message -SeverityLevel $MessageSeverity
+                    If ($Log) {
+                        Add-MessageToFile -Text $Message -File $LogFile
+                    }
+                    If ($Report) {
+                        $ReportResult = [ordered] @{
+                            ID = $Finding.ID
+                            Category = $Finding.Category
+                            Name = $Finding.Name
+                            Severity = $MessageSeverity
+                            Result = $ResultText
+                            Recommended = ""
+                            TestResult = $TestResult
+                            SeverityFinding = ""
+                        }
+                        $ReportAllResults += $ReportResult
+                    }
+                    Continue
+                }
+
                 $RegType = "String"
 
                 #
@@ -1657,20 +1770,20 @@
                 #
                 If ($Finding.RegistryItem -eq "MitigationOptions_FontBocking" -Or $Finding.RegistryItem -eq "Retention" -Or $Finding.RegistryItem -eq "AllocateDASD" -Or $Finding.RegistryItem -eq "ScRemoveOption" -Or $Finding.RegistryItem -eq "AutoAdminLogon") {
                     $RegType = "String"
-                } ElseIf ($Finding.RegistryItem -eq "Machine") {
+                } ElseIf ($Finding.RegistryItem -eq "Machine" -Or $Finding.RegistryItem -eq "EccCurves" -Or $Finding.RegistryItem -eq "NullSessionPipes") {
                     $RegType = "MultiString"
                     $Finding.RecommendedValue = $Finding.RecommendedValue -split ";"
                 } ElseIf ($Finding.RecommendedValue -match "^\d+$") {
                     $RegType = "DWord"
                 }
 
-                if (!(Test-Path $Finding.RegistryPath)) {
+                If (!(Test-Path $Finding.RegistryPath)) {
 
                     $Result = New-Item $Finding.RegistryPath -Force;
 
                     If ($Result) {
                         $ResultText = "Registry key created"
-                        $Message = "ID " + $Finding.ID + ", " + $Finding.RegistryPath + ", " + $ResultText
+                        $Message = "ID " + $Finding.ID + ", " + $Finding.RegistryPath + ", " + $Finding.RegistryItem + ", " + $ResultText
                         $MessageSeverity = "Passed"
                         $TestResult = "Passed"
                         Write-ResultEntry -Text $Message -SeverityLevel $MessageSeverity
@@ -1690,10 +1803,9 @@
                             }
                             $ReportAllResults += $ReportResult
                         }
-
                     } Else {
                         $ResultText = "Failed to create registry key"
-                        $Message = "ID " + $Finding.ID + ", " + $Finding.RegistryPath + ", " + $ResultText
+                        $Message = "ID " + $Finding.ID + ", " + $Finding.RegistryPath + ", " + $Finding.RegistryItem + ", " + $ResultText
                         $MessageSeverity = "High"
                         $TestResult = "Failed"
                         Write-ResultEntry -Text $Message -SeverityLevel $MessageSeverity
@@ -1723,14 +1835,15 @@
                 # other values are already there in order to set the next higher value and not overwrite existing keys.
                 #
                 If ($Finding.Method -eq 'RegistryList') {
-
+                    $RegistryItemFound = $false
+                    $ListPolicies = $Finding.RegistryPath
                     $ResultList = Get-ItemProperty -Path $Finding.RegistryPath
                     $ResultListCounter = 0
                     If ($ResultList | Where-Object { $_ -like "*" + $Finding.RegistryItem + "*" }) {
                         $ResultList.PSObject.Properties | ForEach-Object {
-                            If ( $_.Value -eq $Finding.RegistryItem ) {
-                                $Finding.RegistryItem = $_.Value.Name
-                                Continue
+                            If ($_.Value -eq $Finding.RegistryItem) {
+                                $Finding.RegistryItem = $_.Name
+                                $RegistryItemFound = $true
                             }
                         }
                     } Else {
@@ -1738,25 +1851,86 @@
                             $ResultListCounter++
                         }
                     }
-                    If ($ResultListCounter -eq 0) {
-                        $Finding.RegistryItem = 1
-                    } Else {
-                        $Finding.RegistryItem = $ResultListCounter - 4
+                    # Check if registryItem (key name) has been found or not
+                    If ($RegistryItemFound -eq $false) {
+                        If ($ResultListCounter -eq 0) {
+                            $Finding.RegistryItem = 1
+                        } Else {
+                            # Check if key is already used and can be used
+                            $KeyAlreadyExists = $true
+                            $Finding.RegistryItem = 1
+                            while ($KeyAlreadyExists){
+                                try {
+                                    # This key exists and should be incremented
+                                    $Result = Get-ItemPropertyValue -Path $Finding.RegistryPath -Name $Finding.RegistryItem
+                                    $Finding.RegistryItem=$Finding.RegistryItem+1
+                                    $KeyAlreadyExists = $true;
+                                } catch {
+                                    # This key does not exist and it can be used
+                                    $KeyAlreadyExists = $false;
+                                }
+                            }
+                        }
                     }
                 }
+                $ResultText = ""
+                # Remove this policy if it should not exists
+                If ($Finding.RecommendedValue -eq '-NODATA-') {
 
-                $Result = Set-ItemProperty -PassThru -Path $Finding.RegistryPath -Name $Finding.RegistryItem -Type $RegType -Value $Finding.RecommendedValue
+                    # Check if the key (item) already exists
+                    $keyExists = $true;
+                    try {
+                        # This key exists
+                        $Result = Get-ItemPropertyValue -Path $Finding.RegistryPath -Name $Finding.RegistryItem
+                    } catch {
+                        # This key does not exist
+                        $keyExists = $false;
+                    }
 
-                if ($Result) {
-                    $ResultText = "Registry value created/modified"
-                    $Message = "ID " + $Finding.ID + ", " + $Finding.RegistryPath + ", " + $Finding.RegistryItem + ", " + $ResultText
-                    $MessageSeverity = "Passed"
-                    $TestResult = "Passed"
-                } else {
-                    $ResultText = "Failed to create registry value"
-                    $Message = "ID " + $Finding.ID + ", " + $Finding.RegistryPath + ", " + $Finding.RegistryItem + ", " + $ResultText
-                    $MessageSeverity = "High"
-                    $TestResult = "Failed"
+                    If ($keyExists) {
+                        # key exists
+                        try {
+                            Remove-ItemProperty -Path $Finding.RegistryPath -Name $Finding.RegistryItem
+                            $ResultText = "Registry key removed"
+                            $Message = "ID " + $Finding.ID + ", " + $Finding.RegistryPath + ", " + $Finding.RegistryItem + ", " + $ResultText
+                            $MessageSeverity = "Passed"
+                            $TestResult = "Passed"
+                        } catch {
+                            $ResultText = "Failed to remove registry key"
+                            $Message = "ID " + $Finding.ID + ", " + $Finding.RegistryPath + ", " + $Finding.RegistryItem + ", " + $ResultText
+                            $MessageSeverity = "High"
+                            $TestResult = "Failed"
+                        }
+                    } Else {
+                        # key does not exists
+
+                        If ($Finding.Method -eq 'RegistryList') {
+                            # Don't show incorrect item
+                            $ResultText = "This value does not already exists in list policy"
+                            $Message = "ID " + $Finding.ID + ", " + $Finding.RegistryPath + ", " + $ResultText
+                        } Else {
+                            $ResultText = "This key policy does not already exists"
+                            $Message = "ID " + $Finding.ID + ", " + $Finding.RegistryPath + ", " + $Finding.RegistryItem + ", " + $ResultText
+                        }
+                        $MessageSeverity = "Low"
+                        $TestResult = "Passed"
+                    }
+
+
+                } Else {
+                    $Result = Set-ItemProperty -PassThru -Path $Finding.RegistryPath -Name $Finding.RegistryItem -Type $RegType -Value $Finding.RecommendedValue
+
+                    if ($Result) {
+                        $ResultText = "Registry value created/modified"
+                        $Message = "ID " + $Finding.ID + ", " + $Finding.RegistryPath + ", " + $Finding.RegistryItem + ", " + $ResultText
+                        $MessageSeverity = "Passed"
+                        $TestResult = "Passed"
+                    } else {
+                        $ResultText = "Failed to create registry value"
+                        $Message = "ID " + $Finding.ID + ", " + $Finding.RegistryPath + ", " + $Finding.RegistryItem + ", " + $ResultText
+                        $MessageSeverity = "High"
+                        $TestResult = "Failed"
+                    }
                 }
 
                 Write-ResultEntry -Text $Message -SeverityLevel $MessageSeverity
@@ -2855,6 +3029,103 @@
         }
     }
 
+
+    #
+    # Start GPO mode
+    # HardeningKitty configures all settings in a finding list file.
+    # Even though HardeningKitty works very carefully.
+    # The GPO mode create a GPO containing every registry method remediation.
+    #
+    Elseif ($Mode -eq "GPO") {
+         Write-Output "`n"
+         If ($GPOname.Length -eq 0) {
+             # Control if a GPO name is given
+             $Message = "The GPO Name $GPOname was not found."
+             Write-ProtocolEntry -Text $Message -LogLevel "Error"
+             Break
+         }
+         If ($FileFindingList.Length -eq 0) {
+             # Control if a Finding list is given
+             $CurrentLocation = $PSScriptRoot
+             $DefaultList = "$CurrentLocation\lists\finding_list_0x6d69636b_machine.csv"
+
+             If (Test-Path -Path $DefaultList) {
+                 $FileFindingList = $DefaultList
+             } Else {
+                 $Message = "The finding list $DefaultList was not found."
+                 Write-ProtocolEntry -Text $Message -LogLevel "Error"
+                 Break
+             }
+         }
+
+         # Should check if user is domain admin
+
+         Try
+         {
+             New-GPO -Name $GPOname -ErrorAction Stop | Out-Null
+         }
+         Catch [System.ArgumentException] {
+             # Control if the Name of the GPO is ok
+             Write-ProtocolEntry -Text $_.Exception.Message -LogLevel "Error"
+             Break
+         }
+
+         # Iterrate over finding list
+         $FindingList = Import-Csv -Path $FileFindingList -Delimiter ","
+         ForEach ($Finding in $FindingList) {
+             #
+             # Only Registry Method Policies
+             #
+             If ($Finding.Method -eq "Registry") {
+                 $RegType = "String"
+
+                 #
+                 # Basically this is true, but there is an exception for the finding "MitigationOptions_FontBocking",
+                 # the value "10000000000" is written to the registry as a string...
+                 #
+                 # ... and more exceptions are added over time:
+                 #
+                 # MitigationOptions_FontBocking => Mitigation Options: Untrusted Font Blocking
+                 # Machine => Network access: Remotely accessible registry paths
+                 # Retention => Event Log Service: *: Control Event Log behavior when the log file reaches its maximum size
+                 # AllocateDASD => Devices: Allowed to format and eject removable media
+                 # ScRemoveOption => Interactive logon: Smart card removal behavior
+                 # AutoAdminLogon => MSS: (AutoAdminLogon) Enable Automatic Logon (not recommended)
+                 #
+                 If ($Finding.RegistryItem -eq "MitigationOptions_FontBocking" -Or $Finding.RegistryItem -eq "Retention" -Or $Finding.RegistryItem -eq "AllocateDASD" -Or $Finding.RegistryItem -eq "ScRemoveOption" -Or $Finding.RegistryItem -eq "AutoAdminLogon") {
+                     $RegType = "String"
+                 } ElseIf ($Finding.RegistryItem -eq "Machine") {
+                     $RegType = "MultiString"
+                     $Finding.RecommendedValue = $Finding.RecommendedValue -split ";"
+                 } ElseIf ($Finding.RecommendedValue -match "^\d+$") {
+                     $RegType = "DWord"
+                     $Finding.RecommendedValue = ConvertToInt -string $Finding.RecommendedValue
+                 }
+                 $RegPath = $Finding.RegistryPath.Replace(":","")
+                 $RegItem = $Finding.RegistryItem
+
+                 try{
+                     Set-GPRegistryValue -Name $GPOname -Key $RegPath -ValueName $RegItem -Type $RegType -Value $Finding.RecommendedValue | Out-Null
+                     $ResultText = "Registry value added successfully"
+                     $Message = "ID " + $Finding.ID + ", " + $Finding.RegistryPath + ", " + $Finding.RegistryItem + ", " + $ResultText
+                     $MessageSeverity = "Passed"
+                     $TestResult = "Passed"
+                 } catch {
+                     $ResultText = "Failed to add registry key"
+                     $Message = "ID " + $Finding.ID + ", " + $Finding.RegistryPath + ", " + $ResultText
+                     $MessageSeverity = "High"
+                     $TestResult = "Failed"
+
+                 } finally {
+                     Write-ResultEntry -Text $Message -SeverityLevel $MessageSeverity
+                     If ($Log) {
+                         Add-MessageToFile -Text $Message -File $LogFile
+                     }
+                 }
+             }
+         }
+     }
+
     Write-Output "`n"
     Write-ProtocolEntry -Text "HardeningKitty is done" -LogLevel "Info"
 
@@ -2902,10 +3173,10 @@
 Export-ModuleMember -Function Invoke-HardeningKitty
 
 # SIG # Begin signature block
-# MIIgIgYJKoZIhvcNAQcCoIIgEzCCIA8CAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
+# MIIgIAYJKoZIhvcNAQcCoIIgETCCIA0CAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU2HMRijCLsnIkXXggS/333pxI
-# uV6gghn0MIIF4DCCBMigAwIBAgIQeO1YDfU4t32dWmgwBkYSEDANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUcXVHe2qDFIH/v3Jc9DPfyETz
+# 67CgghnzMIIF4DCCBMigAwIBAgIQeO1YDfU4t32dWmgwBkYSEDANBgkqhkiG9w0B
 # AQsFADCBkTELMAkGA1UEBhMCR0IxGzAZBgNVBAgTEkdyZWF0ZXIgTWFuY2hlc3Rl
 # cjEQMA4GA1UEBxMHU2FsZm9yZDEaMBgGA1UEChMRQ09NT0RPIENBIExpbWl0ZWQx
 # NzA1BgNVBAMTLkNPTU9ETyBSU0EgRXh0ZW5kZWQgVmFsaWRhdGlvbiBDb2RlIFNp
@@ -3006,72 +3277,72 @@ Export-ModuleMember -Function Invoke-HardeningKitty
 # zM3uJ5rloMAMcofBbk1a0x7q8ETmMm8c6xdOlMN4ZSA7D0GqH+mhQZ3+sbigZSo0
 # 4N6o+TzmwTC7wKBjLPxcFgCo0MR/6hGdHgbGpm0yXbQ4CStJB6r97DDa8acvz7f9
 # +tCjhNknnvsBZne5VhDhIG7GrrH5trrINV0zdo7xfCAMKneutaIChrop7rRaALGM
-# q+P5CslUXdS5anSevUiumDCCBvYwggTeoAMCAQICEQCQOX+a0ko6E/K9kV8IOKlD
-# MA0GCSqGSIb3DQEBDAUAMH0xCzAJBgNVBAYTAkdCMRswGQYDVQQIExJHcmVhdGVy
-# IE1hbmNoZXN0ZXIxEDAOBgNVBAcTB1NhbGZvcmQxGDAWBgNVBAoTD1NlY3RpZ28g
-# TGltaXRlZDElMCMGA1UEAxMcU2VjdGlnbyBSU0EgVGltZSBTdGFtcGluZyBDQTAe
-# Fw0yMjA1MTEwMDAwMDBaFw0zMzA4MTAyMzU5NTlaMGoxCzAJBgNVBAYTAkdCMRMw
-# EQYDVQQIEwpNYW5jaGVzdGVyMRgwFgYDVQQKEw9TZWN0aWdvIExpbWl0ZWQxLDAq
-# BgNVBAMMI1NlY3RpZ28gUlNBIFRpbWUgU3RhbXBpbmcgU2lnbmVyICMzMIICIjAN
-# BgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAkLJxP3nh1LmKF8zDl8KQlHLtWjpv
-# AUN/c1oonyR8oDVABvqUrwqhg7YT5EsVBl5qiiA0cXu7Ja0/WwqkHy9sfS5hUdCM
-# WTc+pl3xHl2AttgfYOPNEmqIH8b+GMuTQ1Z6x84D1gBkKFYisUsZ0vCWyUQfOV2c
-# sJbtWkmNfnLkQ2t/yaA/bEqt1QBPvQq4g8W9mCwHdgFwRd7D8EJp6v8mzANEHxYo
-# 4Wp0tpxF+rY6zpTRH72MZar9/MM86A2cOGbV/H0em1mMkVpCV1VQFg1LdHLuoCox
-# /CYCNPlkG1n94zrU6LhBKXQBPw3gE3crETz7Pc3Q5+GXW1X3KgNt1c1i2s6cHvzq
-# cH3mfUtozlopYdOgXCWzpSdoo1j99S1ryl9kx2soDNqseEHeku8Pxeyr3y1vGlRR
-# bDOzjVlg59/oFyKjeUFiz/x785LaruA8Tw9azG7fH7wir7c4EJo0pwv//h1epPPu
-# FjgrP6x2lEGdZB36gP0A4f74OtTDXrtpTXKZ5fEyLVH6Ya1N6iaObfypSJg+8kYN
-# abG3bvQF20EFxhjAUOT4rf6sY2FHkbxGtUZTbMX04YYnk4Q5bHXgHQx6WYsuy/Rk
-# LEJH9FRYhTflx2mn0iWLlr/GreC9sTf3H99Ce6rrHOnrPVrd+NKQ1UmaOh2DGld/
-# HAHCzhx9zPuWFcUCAwEAAaOCAYIwggF+MB8GA1UdIwQYMBaAFBqh+GEZIA/DQXdF
-# KI7RNV8GEgRVMB0GA1UdDgQWBBQlLmg8a5orJBSpH6LfJjrPFKbx4DAOBgNVHQ8B
-# Af8EBAMCBsAwDAYDVR0TAQH/BAIwADAWBgNVHSUBAf8EDDAKBggrBgEFBQcDCDBK
-# BgNVHSAEQzBBMDUGDCsGAQQBsjEBAgEDCDAlMCMGCCsGAQUFBwIBFhdodHRwczov
-# L3NlY3RpZ28uY29tL0NQUzAIBgZngQwBBAIwRAYDVR0fBD0wOzA5oDegNYYzaHR0
-# cDovL2NybC5zZWN0aWdvLmNvbS9TZWN0aWdvUlNBVGltZVN0YW1waW5nQ0EuY3Js
-# MHQGCCsGAQUFBwEBBGgwZjA/BggrBgEFBQcwAoYzaHR0cDovL2NydC5zZWN0aWdv
-# LmNvbS9TZWN0aWdvUlNBVGltZVN0YW1waW5nQ0EuY3J0MCMGCCsGAQUFBzABhhdo
-# dHRwOi8vb2NzcC5zZWN0aWdvLmNvbTANBgkqhkiG9w0BAQwFAAOCAgEAc9rtaHLL
-# wrlAoTG7tAOjLRR7JOe0WxV9qOn9rdGSDXw9NqBp2fOaMNqsadZ0VyQ/fg882fXD
-# eSVsJuiNaJPO8XeJOX+oBAXaNMMU6p8IVKv/xH6WbCvTlOu0bOBFTSyy9zs7WrXB
-# +9eJdW2YcnL29wco89Oy0OsZvhUseO/NRaAA5PgEdrtXxZC+d1SQdJ4LT03EqhOP
-# l68BNSvLmxF46fL5iQQ8TuOCEmLrtEQMdUHCDzS4iJ3IIvETatsYL254rcQFtOiE
-# CJMH+X2D/miYNOR35bHOjJRs2wNtKAVHfpsu8GT726QDMRB8Gvs8GYDRC3C5VV9H
-# vjlkzrfaI1Qy40ayMtjSKYbJFV2Ala8C+7TRLp04fDXgDxztG0dInCJqVYLZ8roI
-# ZQPl8SnzSIoJAUymefKithqZlOuXKOG+fRuhfO1WgKb0IjOQ5IRT/Cr6wKeXqOq1
-# jXrO5OBLoTOrC3ag1WkWt45mv1/6H8Sof6ehSBSRDYL8vU2Z7cnmbDb+d0OZuGkt
-# fGEv7aOwSf5bvmkkkf+T/FdpkkvZBT9thnLTotDAZNI6QsEaA/vQ7ZohuD+vprJR
-# VNVMxcofEo1XxjntXP/snyZ2rWRmZ+iqMODSrbd9sWpBJ24DiqN04IoJgm6/4/a3
-# vJ4LKRhogaGcP24WWUsUCQma5q6/YBXdhvUxggWYMIIFlAIBATCBpjCBkTELMAkG
-# A1UEBhMCR0IxGzAZBgNVBAgTEkdyZWF0ZXIgTWFuY2hlc3RlcjEQMA4GA1UEBxMH
-# U2FsZm9yZDEaMBgGA1UEChMRQ09NT0RPIENBIExpbWl0ZWQxNzA1BgNVBAMTLkNP
-# TU9ETyBSU0EgRXh0ZW5kZWQgVmFsaWRhdGlvbiBDb2RlIFNpZ25pbmcgQ0ECEHjt
-# WA31OLd9nVpoMAZGEhAwCQYFKw4DAhoFAKB4MBgGCisGAQQBgjcCAQwxCjAIoAKA
-# AKECgAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGCNwIBCzEO
-# MAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFFPsuEjlxP+s0mw3oYLGwXZI
-# UwmpMA0GCSqGSIb3DQEBAQUABIIBAHCTpEmA+oTUt5FWzkKz9yR8byhEfAJ5dPGU
-# AeXsXfhefic33SZTxrDgPMtZtE4sekfMJxBFPEIfSJ4vevMyfBDOrfsqWUM80smO
-# IqewVJaAg4p8txM4so2hzSPUZDubMJ5A40SlRoEfaZP76HWs3jOImH0vDWpxdGDo
-# AV1tEzKVZN2HU4rAcNBasEeuZoEgdDyyRIdnBvcx3a0dIu4J1fLeO/U/XSzZvEpE
-# sJ3ELEbhswBsqrMbbAMU3kQCrHgVsNKAys5I7h1hPvJHwfo/mp8MYXPFHtJCZ8I+
-# rHzp6I0I4aE1hrQQKxReWnMvR8qaVbDj4LzVSLDphtCgcJHe+O2hggNMMIIDSAYJ
-# KoZIhvcNAQkGMYIDOTCCAzUCAQEwgZIwfTELMAkGA1UEBhMCR0IxGzAZBgNVBAgT
-# EkdyZWF0ZXIgTWFuY2hlc3RlcjEQMA4GA1UEBxMHU2FsZm9yZDEYMBYGA1UEChMP
-# U2VjdGlnbyBMaW1pdGVkMSUwIwYDVQQDExxTZWN0aWdvIFJTQSBUaW1lIFN0YW1w
-# aW5nIENBAhEAkDl/mtJKOhPyvZFfCDipQzANBglghkgBZQMEAgIFAKB5MBgGCSqG
-# SIb3DQEJAzELBgkqhkiG9w0BBwEwHAYJKoZIhvcNAQkFMQ8XDTIyMTIyOTA2MzA0
-# NVowPwYJKoZIhvcNAQkEMTIEMCwwQoSjHjvq0Y44/ytS0hYDbu2hYSvSLAZcUQrw
-# JQhUbgerotT9WpnUqpboCXcaITANBgkqhkiG9w0BAQEFAASCAgANmGAdjWb4CvaV
-# vmIv9njNrdzHYyr62Ib5JGo6G8xadWw5qVOXQMxkaloMszr2mV5Wpp18iSyeqMyf
-# j/qGw19tqWHDVMEQO1NSNPkKA6EU54xNWIhiEEtqvGB4s5oXNZC7rDb4Rn5ZDzS1
-# urJmb0x+fTvZgfxsudoEh+h1o+C2DesseJA+9IvLzcecGzm8ancev7EI7q3NdBsJ
-# /PvdnGCoaQ6ItclFdQu8JyCPqvtvXUGK44X5Eic2kCM1XzVsBGoUW0Kv5uHRhI8Z
-# Sr4aaWfcSB4Ak791TSEgM0bewPv3EhXv8d1WT0Bj4/Dg2j1kmIYkzeVc1Edwsd8o
-# sdzWR1mz3GQIslh0AVGL2N+oC8wLbATtvYmSRWRn1WPgUPJG4W9gXxIN7U0MuvXq
-# wcxu/U444O0CAaMVmHC2Glo4MzeT531SlyaJOf+KPxu8DMT08VNSv0St4zlR7DQZ
-# 96TEGQcRXeVXVFN9rBJpwxE5iQJjh/fe/T0Vk9xyek3sV9I1R+YzgFcCsB9o/E1P
-# Zn0VBbQ2xtl5VsDZnrXLrxMdUuqlcvJDmC+cIYUkMb8KpCJRs32UZKTal3cxURaD
-# ycsTt5WnU/Ed55ZupBiZ/oTQq5f01zr7eZdN7gLeqhFNqMRPsfomWspn0YTmXrks
-# TRgBqkK23Pb9c6DmE1g4HrQO+WBt8w==
+# q+P5CslUXdS5anSevUiumDCCBvUwggTdoAMCAQICEDlMJeF8oG0nqGXiO9kdItQw
+# DQYJKoZIhvcNAQEMBQAwfTELMAkGA1UEBhMCR0IxGzAZBgNVBAgTEkdyZWF0ZXIg
+# TWFuY2hlc3RlcjEQMA4GA1UEBxMHU2FsZm9yZDEYMBYGA1UEChMPU2VjdGlnbyBM
+# aW1pdGVkMSUwIwYDVQQDExxTZWN0aWdvIFJTQSBUaW1lIFN0YW1waW5nIENBMB4X
+# DTIzMDUwMzAwMDAwMFoXDTM0MDgwMjIzNTk1OVowajELMAkGA1UEBhMCR0IxEzAR
+# BgNVBAgTCk1hbmNoZXN0ZXIxGDAWBgNVBAoTD1NlY3RpZ28gTGltaXRlZDEsMCoG
+# A1UEAwwjU2VjdGlnbyBSU0EgVGltZSBTdGFtcGluZyBTaWduZXIgIzQwggIiMA0G
+# CSqGSIb3DQEBAQUAA4ICDwAwggIKAoICAQCkkyhSS88nh3akKRyZOMDnDtTRHOxo
+# ywFk5IrNd7BxZYK8n/yLu7uVmPslEY5aiAlmERRYsroiW+b2MvFdLcB6og7g4FZk
+# 7aHlgSByIGRBbMfDCPrzfV3vIZrCftcsw7oRmB780yAIQrNfv3+IWDKrMLPYjHqW
+# ShkTXKz856vpHBYusLA4lUrPhVCrZwMlobs46Q9vqVqakSgTNbkf8z3hJMhrsZno
+# De+7TeU9jFQDkdD8Lc9VMzh6CRwH0SLgY4anvv3Sg3MSFJuaTAlGvTS84UtQe3Lg
+# W/0Zux88ahl7brstRCq+PEzMrIoEk8ZXhqBzNiuBl/obm36Ih9hSeYn+bnc317tQ
+# n/oYJU8T8l58qbEgWimro0KHd+D0TAJI3VilU6ajoO0ZlmUVKcXtMzAl5paDgZr2
+# YGaQWAeAzUJ1rPu0kdDF3QFAaraoEO72jXq3nnWv06VLGKEMn1ewXiVHkXTNdRLR
+# nG/kXg2b7HUm7v7T9ZIvUoXo2kRRKqLMAMqHZkOjGwDvorWWnWKtJwvyG0rJw5RC
+# N4gghKiHrsO6I3J7+FTv+GsnsIX1p0OF2Cs5dNtadwLRpPr1zZw9zB+uUdB7bNgd
+# LRFCU3F0wuU1qi1SEtklz/DT0JFDEtcyfZhs43dByP8fJFTvbq3GPlV78VyHOmTx
+# YEsFT++5L+wJEwIDAQABo4IBgjCCAX4wHwYDVR0jBBgwFoAUGqH4YRkgD8NBd0Uo
+# jtE1XwYSBFUwHQYDVR0OBBYEFAMPMciRKpO9Y/PRXU2kNA/SlQEYMA4GA1UdDwEB
+# /wQEAwIGwDAMBgNVHRMBAf8EAjAAMBYGA1UdJQEB/wQMMAoGCCsGAQUFBwMIMEoG
+# A1UdIARDMEEwNQYMKwYBBAGyMQECAQMIMCUwIwYIKwYBBQUHAgEWF2h0dHBzOi8v
+# c2VjdGlnby5jb20vQ1BTMAgGBmeBDAEEAjBEBgNVHR8EPTA7MDmgN6A1hjNodHRw
+# Oi8vY3JsLnNlY3RpZ28uY29tL1NlY3RpZ29SU0FUaW1lU3RhbXBpbmdDQS5jcmww
+# dAYIKwYBBQUHAQEEaDBmMD8GCCsGAQUFBzAChjNodHRwOi8vY3J0LnNlY3RpZ28u
+# Y29tL1NlY3RpZ29SU0FUaW1lU3RhbXBpbmdDQS5jcnQwIwYIKwYBBQUHMAGGF2h0
+# dHA6Ly9vY3NwLnNlY3RpZ28uY29tMA0GCSqGSIb3DQEBDAUAA4ICAQBMm2VY+uB5
+# z+8VwzJt3jOR63dY4uu9y0o8dd5+lG3DIscEld9laWETDPYMnvWJIF7Bh8cDJMrH
+# pfAm3/j4MWUN4OttUVemjIRSCEYcKsLe8tqKRfO+9/YuxH7t+O1ov3pWSOlh5Zo5
+# d7y+upFkiHX/XYUWNCfSKcv/7S3a/76TDOxtog3Mw/FuvSGRGiMAUq2X1GJ4KoR5
+# qNc9rCGPcMMkeTqX8Q2jo1tT2KsAulj7NYBPXyhxbBlewoNykK7gxtjymfvqtJJl
+# fAd8NUQdrVgYa2L73mzECqls0yFGcNwvjXVMI8JB0HqWO8NL3c2SJnR2XDegmiSe
+# Tl9O048P5RNPWURlS0Nkz0j4Z2e5Tb/MDbE6MNChPUitemXk7N/gAfCzKko5rMGk
+# +al9NdAyQKCxGSoYIbLIfQVxGksnNqrgmByDdefHfkuEQ81D+5CXdioSrEDBcFuZ
+# CkD6gG2UYXvIbrnIZ2ckXFCNASDeB/cB1PguEc2dg+X4yiUcRD0n5bCGRyoLG4R2
+# fXtoT4239xO07aAt7nMP2RC6nZksfNd1H48QxJTmfiTllUqIjCfWhWYd+a5kdpHo
+# SP7IVQrtKcMf3jimwBT7Mj34qYNiNsjDvgCHHKv6SkIciQPc9Vx8cNldeE7un14g
+# 5glqfCsIo0j1FfwET9/NIRx65fWOGtS5QDGCBZcwggWTAgEBMIGmMIGRMQswCQYD
+# VQQGEwJHQjEbMBkGA1UECBMSR3JlYXRlciBNYW5jaGVzdGVyMRAwDgYDVQQHEwdT
+# YWxmb3JkMRowGAYDVQQKExFDT01PRE8gQ0EgTGltaXRlZDE3MDUGA1UEAxMuQ09N
+# T0RPIFJTQSBFeHRlbmRlZCBWYWxpZGF0aW9uIENvZGUgU2lnbmluZyBDQQIQeO1Y
+# DfU4t32dWmgwBkYSEDAJBgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIBDDEKMAigAoAA
+# oQKAADAZBgkqhkiG9w0BCQMxDAYKKwYBBAGCNwIBBDAcBgorBgEEAYI3AgELMQ4w
+# DAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUkuSr8AhOmP1UPEb5hzYyjj/h
+# oIcwDQYJKoZIhvcNAQEBBQAEggEAAlo5mnqIpnL3z4nDuZlsOzN4cdhsohZ8zauA
+# pOkn626o7NPlE1jRwt8i9lmrhwOCnhzrMnF9wcP/gofOGic/P0x3cGo7047vHoKQ
+# J2W8z02nIO+e7hK8urql/lJXwYbdSru34HnjP3p9wK9lhJNoFQP4RK3oEWj4m2sa
+# RHgFlcJYgx25Co7QHrnZarkUrBs6HdIypXcxNmgI/SY4rj/rGlXPQWUuip0R1bOY
+# IH23hG6kytvVdhax69em0NykpMcdeqduCMF0j3kUKlhUVcxwqL6PmpWG7jKy1mMb
+# bIm6aiQpnqUQS442oUwQ+oTdw9iNein/8sV19dPtwgk8e92v56GCA0swggNHBgkq
+# hkiG9w0BCQYxggM4MIIDNAIBATCBkTB9MQswCQYDVQQGEwJHQjEbMBkGA1UECBMS
+# R3JlYXRlciBNYW5jaGVzdGVyMRAwDgYDVQQHEwdTYWxmb3JkMRgwFgYDVQQKEw9T
+# ZWN0aWdvIExpbWl0ZWQxJTAjBgNVBAMTHFNlY3RpZ28gUlNBIFRpbWUgU3RhbXBp
+# bmcgQ0ECEDlMJeF8oG0nqGXiO9kdItQwDQYJYIZIAWUDBAICBQCgeTAYBgkqhkiG
+# 9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3DQEJBTEPFw0yMzA3MDYwNTE2NDNa
+# MD8GCSqGSIb3DQEJBDEyBDC8T2gKmAgkca9niSfPQQUMaWTW9hCWNArVS1SBtN4J
+# G9COUWCOQ+TdFBHbmIgGed4wDQYJKoZIhvcNAQEBBQAEggIAF+InwYpqiNdu8NLI
+# RfD5kRKkd9eNjThICgRE9dgbPK+cOxLyttgxHqeMLNotfMMx2UH0u5T/LI9bruQa
+# G3Glo3pDYd04aPQe+4EYZOPDlQU3PBQPB9cuftBv0FPbCF5XE+kWZvdrNwGQU/vn
+# Wmd6AArNo+YlI7FKjwMC1ODELXdMN7BeH4aDY3h53qW/uasVwNKIhZTD73mmw/0R
+# YWk8+OyGR+atDzuMzlh61nXMC8ySplj+9OZFGnNdQHdpgtbYzj5kPCt9ZmI+p1DD
+# aKM5z+3qxbXLd+kq/bsXbtioN+hCkfNk9PlALpttg5JbjjPLRdCWL5bpIbJSrxWO
+# X4t7ULBQiVElNCSr/rjQ0OG5YQup/a2OAho2Xv4xx+GoZ7lalqw9lxDAaVOkhPMj
+# PvLmdf4jj/vCLSkqbg1OB3SI+PoqS0VqpXI3dwDR0RoEt8O7bXzYpcnewavIMxOj
+# 9qHPSOYnpZDi3g1zDHzuaJr62EmQHJtu9EtM47XeAs0L9qMj1eveBsZrFzCUDu5K
+# hiuFc9U9A45/XBIE8d6gIIOSLiCOZBO0gCfZ9Cgr8CJe4QJrdnvA0vZR9X0mHkXq
+# VI4GXgX03BC3bo1asLzsaOtbRio1QlWj050i7JO32cMjb5SayMpY67BQA8J3TO1h
+# dBUFCL2sFMqJx/fRQUHL3tWjf1k=
 # SIG # End signature block

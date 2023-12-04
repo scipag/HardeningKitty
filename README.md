@@ -60,12 +60,12 @@ PS C:\tmp> Invoke-HardeningKitty -EmojiSupport
 
 ## How To Install
 
-First create the directory *HardeningKitty* and for every version a sub directory like *0.9.0* in a path listed in the *PSModulePath* environment variable.
+First create the directory *HardeningKitty* and for every version a sub directory like *0.9.2* in a path listed in the *PSModulePath* environment variable.
 
 Copy the module *HardeningKitty.psm1*, *HardeningKitty.psd1*, and the *lists* directory to this new directory.
 
 ```powershell
-PS C:\tmp> $Version = "0.9.0"
+PS C:\tmp> $Version = "0.9.2"
 PS C:\tmp> New-Item -Path $Env:ProgramFiles\WindowsPowerShell\Modules\HardeningKitty\$Version -ItemType Directory
 PS C:\tmp> Copy-Item -Path .\HardeningKitty.psd1,.\HardeningKitty.psm1,.\lists\ -Destination $Env:ProgramFiles\WindowsPowerShell\Modules\HardeningKitty\$Version\ -Recurse
 ```
@@ -78,8 +78,8 @@ You can use the script below to download and install the latest release of *Hard
 
 ```powershell
 Function InstallHardeningKitty() {
-    $Version = ((Invoke-WebRequest "https://api.github.com/repos/0x6d69636b/windows_hardening/releases/latest" -UseBasicParsing) | ConvertFrom-Json).Name
-    $HardeningKittyLatestVersionDownloadLink = ((Invoke-WebRequest "https://api.github.com/repos/0x6d69636b/windows_hardening/releases/latest" -UseBasicParsing) | ConvertFrom-Json).zipball_url
+    $Version = (((Invoke-WebRequest "https://api.github.com/repos/scipag/HardeningKitty/releases/latest" -UseBasicParsing) | ConvertFrom-Json).Name).SubString(2)
+    $HardeningKittyLatestVersionDownloadLink = ((Invoke-WebRequest "https://api.github.com/repos/scipag/HardeningKitty/releases/latest" -UseBasicParsing) | ConvertFrom-Json).zipball_url
     $ProgressPreference = 'SilentlyContinue'
     Invoke-WebRequest $HardeningKittyLatestVersionDownloadLink -Out HardeningKitty$Version.zip
     Expand-Archive -Path ".\HardeningKitty$Version.zip" -Destination ".\HardeningKitty$Version" -Force
@@ -98,7 +98,7 @@ InstallHardeningKitty
 
 #### Audit
 
-HardeningKitty performs an audit, saves the results in a CSV file and creates a log file. The files are automatically named and receive a timestamp. Using the parameters _ReportFile_ or _LogFile_, it is also possible to assign your own name and path.
+The default mode is _audit_. HardeningKitty performs an audit, saves the results to a CSV file and creates a log file. The files are automatically named and receive a timestamp. Using the parameters _ReportFile_ or _LogFile_, it is also possible to assign your own name and path.
 
 The _Filter_ parameter can be used to filter the hardening list. For this purpose the PowerShell ScriptBlock syntax must be used, for example `{ $_.ID -eq 4505 }`. The following elements are useful for filtering: ID, Category, Name, Method, and Severity.
 
@@ -112,16 +112,20 @@ HardeningKitty can be executed with a specific list defined by the parameter _Fi
 Invoke-HardeningKitty -FileFindingList .\lists\finding_list_0x6d69636b_user.csv -SkipMachineInformation
 ```
 
-HardeningKitty uses the default list, and saves the results in a specific file.
-
-```powershell
-Invoke-HardeningKitty -Mode Config -Report -ReportFile C:\tmp\my_hardeningkitty_report.csv
-```
-
 HardeningKitty uses the default list, and checks only tests with the severity Medium.
 
 ```powershell
 Invoke-HardeningKitty -Filter { $_.Severity -eq "Medium" }
+```
+
+#### Config
+
+The mode _config_ retrives all current settings of a system. If a setting has not been configured, HardeningKitty will use a default value stored in the finding list. This mode can be combined with other functions, for example to create a backup.
+
+HardeningKitty gets the current settings and stores them in a report:
+
+```powershell
+Invoke-HardeningKitty -Mode Config -Report -ReportFile C:\tmp\my_hardeningkitty_report.csv
 ```
 
 #### Backup
@@ -265,7 +269,8 @@ HardeningKitty can be used to audit systems against the following baselines / be
 | Microsoft Security baseline for Microsoft Edge | 98, 99, 100, 101, 102, 103, 104, 105, 106 | Final |
 | Microsoft Security baseline for Microsoft Edge | 107, 108, 109, 110, 111 | Final |
 | Microsoft Security baseline for Microsoft Edge | 112, 113 | Final |
-| Microsoft Security baseline for Microsoft Edge | 114 | Final |
+| Microsoft Security baseline for Microsoft Edge | 114, 115, 116 | Final |
+| Microsoft Security baseline for Microsoft Edge | 117, 118, 119 | Final |
 | Microsoft Security baseline for Windows 10 | 2004 | Final |
 | Microsoft Security baseline for Windows 10 | 20H2, 21H1 | Final |
 | Microsoft Security baseline for Windows 10 | 21H2 | Final |
@@ -274,6 +279,8 @@ HardeningKitty can be used to audit systems against the following baselines / be
 | Microsoft Security baseline for Windows 11 | 21H2 | Final |
 | Microsoft Security baseline for Windows 11 (Machine) | 22H2 | Final |
 | Microsoft Security baseline for Windows 11 (User) | 22H2 | Final |
+| Microsoft Security baseline for Windows 11 (Machine) | 23H2 | Final |
+| Microsoft Security baseline for Windows 11 (User) | 23H2 | Final |
 | Microsoft Security baseline for Windows Server (DC) | 2004 | Final |
 | Microsoft Security baseline for Windows Server (Member) | 2004 | Final |
 | Microsoft Security baseline for Windows Server (DC) | 20H2 | Final |

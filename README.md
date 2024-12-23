@@ -6,7 +6,7 @@ _HardeningKitty_ supports hardening of a Windows system. The configuration of th
 
 The script was developed for English systems. It is possible that in other languages the analysis is incorrect. Please create an issue if this occurs.
 
-## How to Run
+### How To Run
 
 Run the script with administrative privileges to access machine settings. For the user settings it is better to execute them with a normal user account. Ideally, the user account is used for daily work.
 
@@ -58,7 +58,7 @@ PS C:\tmp> Invoke-HardeningKitty -EmojiSupport
 [*] 9/4/2022 8:54:25 AM - Your HardeningKitty score is: 4.82. HardeningKitty Statistics: Total checks: 325 - Passed: 213, Low: 33, Medium: 76, High: 3.
 ```
 
-## How To Install
+### How To Install
 
 First create the directory *HardeningKitty* and for every version a sub directory like *0.9.2* in a path listed in the *PSModulePath* environment variable.
 
@@ -78,8 +78,8 @@ You can use the script below to download and install the latest release of *Hard
 
 ```powershell
 Function InstallHardeningKitty() {
-    $Version = (((Invoke-WebRequest "https://api.github.com/repos/scipag/HardeningKitty/releases/latest" -UseBasicParsing) | ConvertFrom-Json).Name).SubString(2)
-    $HardeningKittyLatestVersionDownloadLink = ((Invoke-WebRequest "https://api.github.com/repos/scipag/HardeningKitty/releases/latest" -UseBasicParsing) | ConvertFrom-Json).zipball_url
+    $Version = (((Invoke-WebRequest "https://api.github.com/repos/0x6d69636b/windows_hardening/releases/latest" -UseBasicParsing) | ConvertFrom-Json).Name).SubString(2)
+    $HardeningKittyLatestVersionDownloadLink = ((Invoke-WebRequest "https://api.github.com/repos/0x6d69636b/windows_hardening/releases/latest" -UseBasicParsing) | ConvertFrom-Json).zipball_url
     $ProgressPreference = 'SilentlyContinue'
     Invoke-WebRequest $HardeningKittyLatestVersionDownloadLink -Out HardeningKitty$Version.zip
     Expand-Archive -Path ".\HardeningKitty$Version.zip" -Destination ".\HardeningKitty$Version" -Force
@@ -162,6 +162,8 @@ Invoke-HardeningKitty -Mode HailMary -Log -Report -FileFindingList ".\myBackup.c
 
 The _HailMary_ method is very powerful. It can be used to deploy a finding list on a system. All findings are set on this system as recommended in the list. With power comes responsibility. Please use this mode only if you know what you are doing. Be sure to have a backup of the system.
 
+For now, the filter function is only supported in Audit and Config mode. As the HailMary mode is a delicate matter, create your own file and remove all the lines you want to filter.
+
 ```powershell
 Invoke-HardeningKitty -Mode HailMary -Log -Report -FileFindingList .\lists\finding_list_0x6d69636b_machine.csv
 ```
@@ -170,7 +172,7 @@ Before HailMary is run, a finding list must be picked. It is important to check 
 
 #### Create a Group Policy (experimental)
 
-Thanks to [@gderybel](https://github.com/gderybel), HardeningKitty can convert a finding list into a group policy. At the moment only registry settings can be converted and not everything has been tested yet. A new policy is created, as long as it is not assigned to an object, no change is made to the system. Use it with care.
+Thanks to [@gderybel](https://github.com/gderybel), HardeningKitty can convert a finding list into a group policy. As a basic requirement, the Group Policy Management PowerShell module must be installed. At the moment only registry settings can be converted and not everything has been tested yet. A new policy is created, as long as it is not assigned to an object, no change is made to the system. Use it with care.
 
 ```powershell
 Invoke-HardeningKitty -Mode GPO -FileFindingList .\lists\finding_list_0x6d69636b_machine.csv -GPOName HardeningKitty-Machine-01
@@ -227,30 +229,42 @@ HardeningKitty can be used to audit systems against the following baselines / be
 | CIS Microsoft Windows 10 Enterprise (User) | 21H2 | 1.12.0 |
 | CIS Microsoft Windows 10 Enterprise (Machine) | 22H2 | 2.0.0 |
 | CIS Microsoft Windows 10 Enterprise (User) | 22H2 | 2.0.0 |
+| CIS Microsoft Windows 10 Enterprise (Machine) | 22H2 | 3.0.0 |
+| CIS Microsoft Windows 10 Enterprise (User) | 22H2 | 3.0.0 |
 | CIS Microsoft Windows 11 Enterprise (Machine) | 21H2 | 1.0.0 |
 | CIS Microsoft Windows 11 Enterprise (User) | 21H2 | 1.0.0 |
 | CIS Microsoft Windows 11 Enterprise (Machine) | 22H2 | 2.0.0 |
 | CIS Microsoft Windows 11 Enterprise (User) | 22H2 | 2.0.0 |
+| CIS Microsoft Windows 11 Enterprise (Machine) | 23H2 | 3.0.0 |
+| CIS Microsoft Windows 11 Enterprise (User) | 23H2 | 3.0.0 |
 | CIS Microsoft Windows Server 2012 R2 (Machine) | R2 | 2.4.0 |
 | CIS Microsoft Windows Server 2012 R2 (User) | R2 | 2.4.0 |
 | CIS Microsoft Windows Server 2012 R2 (Machine) | R2 | 2.6.0 |
 | CIS Microsoft Windows Server 2012 R2 (User) | R2 | 2.6.0 |
+| CIS Microsoft Windows Server 2012 R2 (Machine) | R2 | 3.0.0 |
+| CIS Microsoft Windows Server 2012 R2 (User) | R2 | 3.0.0 |
 | CIS Microsoft Windows Server 2016 (Machine) | 1607 | 1.2.0 |
 | CIS Microsoft Windows Server 2016 (User) | 1607 | 1.2.0 |
 | CIS Microsoft Windows Server 2016 (Machine) | 1607 | 1.3.0 |
 | CIS Microsoft Windows Server 2016 (User) | 1607 | 1.3.0 |
 | CIS Microsoft Windows Server 2016 (Machine) | 1607 | 2.0.0 |
 | CIS Microsoft Windows Server 2016 (User) | 1607 | 2.0.0 |
+| CIS Microsoft Windows Server 2016 (Machine) | 1607 | 3.0.0 |
+| CIS Microsoft Windows Server 2016 (User) | 1607 | 3.0.0 |
 | CIS Microsoft Windows Server 2019 (Machine) | 1809 | 1.1.0 |
 | CIS Microsoft Windows Server 2019 (User) | 1809 | 1.1.0 |
 | CIS Microsoft Windows Server 2019 (Machine) | 1809 | 1.2.1 |
 | CIS Microsoft Windows Server 2019 (User) | 1809 | 1.2.1 |
 | CIS Microsoft Windows Server 2019 (Machine) | 1809 | 2.0.0 |
 | CIS Microsoft Windows Server 2019 (User) | 1809 | 2.0.0 |
+| CIS Microsoft Windows Server 2019 (Machine) | 1809 | 3.0.0 |
+| CIS Microsoft Windows Server 2019 (User) | 1809 | 3.0.0 |
 | CIS Microsoft Windows Server 2022 (Machine) | 21H2 | 1.0.0 |
 | CIS Microsoft Windows Server 2022 (User) | 21H2 | 1.0.0 |
 | CIS Microsoft Windows Server 2022 (Machine) | 22H2 | 2.0.0 |
 | CIS Microsoft Windows Server 2022 (User) | 22H2 | 2.0.0 |
+| CIS Microsoft Windows Server 2022 (Machine) | 22H2 | 3.0.0 |
+| CIS Microsoft Windows Server 2022 (User) | 22H2 | 3.0.0 |
 | DoD Microsoft Windows 10 STIG (Machine) | 20H2 | v2r1 |
 | DoD Microsoft Windows 10 STIG (User) | 20H2 | v2r1 |
 | DoD Windows Server 2019 Domain Controller STIG (Machine) | 20H2 | v2r1 |
@@ -270,7 +284,8 @@ HardeningKitty can be used to audit systems against the following baselines / be
 | Microsoft Security baseline for Microsoft Edge | 107, 108, 109, 110, 111 | Final |
 | Microsoft Security baseline for Microsoft Edge | 112, 113 | Final |
 | Microsoft Security baseline for Microsoft Edge | 114, 115, 116 | Final |
-| Microsoft Security baseline for Microsoft Edge | 117, 118, 119 | Final |
+| Microsoft Security baseline for Microsoft Edge | 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127 | Final |
+| Microsoft Security baseline for Microsoft Edge | 128, 129, 130 | Final |
 | Microsoft Security baseline for Windows 10 | 2004 | Final |
 | Microsoft Security baseline for Windows 10 | 20H2, 21H1 | Final |
 | Microsoft Security baseline for Windows 10 | 21H2 | Final |
@@ -281,6 +296,8 @@ HardeningKitty can be used to audit systems against the following baselines / be
 | Microsoft Security baseline for Windows 11 (User) | 22H2 | Final |
 | Microsoft Security baseline for Windows 11 (Machine) | 23H2 | Final |
 | Microsoft Security baseline for Windows 11 (User) | 23H2 | Final |
+| Microsoft Security baseline for Windows 11 (Machine) | 24H2 | Final |
+| Microsoft Security baseline for Windows 11 (User) | 24H2 | Final |
 | Microsoft Security baseline for Windows Server (DC) | 2004 | Final |
 | Microsoft Security baseline for Windows Server (Member) | 2004 | Final |
 | Microsoft Security baseline for Windows Server (DC) | 20H2 | Final |
@@ -295,7 +312,99 @@ HardeningKitty can be used to audit systems against the following baselines / be
 | Microsoft Security Baseline for Microsoft 365 Apps for enterprise (User) | v2112 | Final |
 | Microsoft Security Baseline for Microsoft 365 Apps for enterprise (Machine) | v2206 | Final |
 | Microsoft Security Baseline for Microsoft 365 Apps for enterprise (User) | v2206 | Final |
-| Microsoft Security Baseline for Microsoft 365 Apps for enterprise (Machine) | v2306 | Final |
-| Microsoft Security Baseline for Microsoft 365 Apps for enterprise (User) | v2306 | Final |
+| Microsoft Security Baseline for Microsoft 365 Apps for enterprise (Machine) | v2306, v2312 | Final |
+| Microsoft Security Baseline for Microsoft 365 Apps for enterprise (User) | v2306, v2312 | Final |
 | Microsoft Windows Server TLS Settings | 1809 | 1.0 |
 | Microsoft Windows Server TLS Settings (Future Use with TLSv1.3) | 1903 | 1.0 |
+
+## Sources
+
+* [CIS Benchmarks](https://www.cisecurity.org/cis-benchmarks/)
+* [Security baseline (FINAL): Windows 10 and Windows Server, version 2004](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-final-windows-10-and-windows-server-version/ba-p/1543631)
+* [Security baseline (FINAL) for Windows 10 and Windows Server, version 20H2](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-final-for-windows-10-and-windows-server/ba-p/1999393)
+* [Security baseline (FINAL) for Windows 10, version 21H1](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-final-for-windows-10-version-21h1/ba-p/2362353)
+* [Security baseline for Windows 10, version 21H2](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-windows-10-version-21h2/ba-p/3042703)
+* [Windows Server 2022 Security Baseline](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/windows-server-2022-security-baseline/ba-p/2724685)
+* [Windows 11 Security baseline](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/windows-11-security-baseline/ba-p/2810772)
+* [Windows 11, version 22H2 Security baseline](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/windows-11-version-22h2-security-baseline/ba-p/3632520)
+* [Windows 11, version 23H2 security baseline](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/windows-11-version-23h2-security-baseline/ba-p/3967618)
+* [Windows 11, version 24H2 security baseline](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/windows-11-version-24h2-security-baseline/ba-p/4252801)
+* [Kernel DMA Protection for Thunderbolt 3](https://docs.microsoft.com/en-us/windows/security/information-protection/kernel-dma-protection-for-thunderbolt)
+* [BitLocker Countermeasures](https://docs.microsoft.com/en-us/windows/security/information-protection/bitlocker/bitlocker-countermeasures)
+* [Blocking the SBP-2 driver and Thunderbolt controllers to reduce 1394 DMA and Thunderbolt DMA threats to BitLocker](https://support.microsoft.com/en-us/help/2516445/blocking-the-sbp-2-driver-and-thunderbolt-controllers-to-reduce-1394-d)
+* [Manage Windows Defender Credential Guard](https://docs.microsoft.com/en-us/windows/security/identity-protection/credential-guard/credential-guard-manage)
+* [Reduce attack surfaces with attack surface reduction rules](https://docs.microsoft.com/en-us/windows/security/threat-protection/microsoft-defender-atp/attack-surface-reduction)
+* [Configuring Additional LSA Protection](https://docs.microsoft.com/en-us/windows-server/security/credentials-protection-and-management/configuring-additional-lsa-protection)
+* [Securely opening Microsoft Office documents that contain Dynamic Data Exchange (DDE) fields](https://docs.microsoft.com/en-us/security-updates/securityadvisories/2017/4053440)
+* [DDE registry settings](https://gist.githubusercontent.com/wdormann/732bb88d9b5dd5a66c9f1e1498f31a1b/raw/69c9d9d14b386d8f178e59a046804501ec1ee304/disable_ddeauto.reg)
+* [Sysmon](https://docs.microsoft.com/en-us/sysinternals/downloads/sysmon)
+* [SwiftOnSecurity/sysmon-config](https://github.com/SwiftOnSecurity/sysmon-config)
+* [Dane Stuckey - @cryps1s Endpoint Isolation with the Windows Firewall](https://medium.com/@cryps1s/endpoint-isolation-with-the-windows-firewall-462a795f4cfb)
+* [Microsoft Security Compliance Toolkit 1.0](https://www.microsoft.com/en-us/download/details.aspx?id=55319)
+* [Policy Analyzer](https://blogs.technet.microsoft.com/secguide/2016/01/22/new-tool-policy-analyzer/)
+* [Security baseline for Office 365 ProPlus (v1908, Sept 2019) - FINAL](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-office-365-proplus-v1908-sept-2019-final/ba-p/873084)
+* [Security baseline for Microsoft 365 Apps for enterprise v2104 - FINAL](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-microsoft-365-apps-for-enterprise-v2104/ba-p/2307695)
+* [Security baseline for Microsoft 365 Apps for enterprise v2106 - FINAL](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-microsoft-365-apps-for-enterprise-v2106/ba-p/2492355)
+* [Security baseline for Microsoft 365 Apps for enterprise, v2112](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-microsoft-365-apps-for-enterprise-v2112/ba-p/3038172)
+* [Security baseline for Microsoft 365 Apps for enterprise v2206](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-m365-apps-for-enterprise-v2306/ba-p/3858702)
+* [Security baseline for Microsoft 365 Apps for enterprise v2306](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-m365-apps-for-enterprise-v2306/ba-p/3858702)
+* [Security baseline for Microsoft 365 Apps for enterprise v2312](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-review-for-m365-apps-for-enterprise-v2312/ba-p/4009591)
+* [mackwage/windows_hardening.cmd](https://gist.github.com/mackwage/08604751462126599d7e52f233490efe)
+* [Security baseline for Microsoft Edge version 87](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-microsoft-edge-version-87/ba-p/1950297)
+* [Security baseline for Microsoft Edge version 89](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-microsoft-edge-version-89/ba-p/2186265)
+* [Security baseline for Microsoft Edge v92](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-microsoft-edge-v92/ba-p/2563679)
+* [Security baseline for Microsoft Edge v93](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-microsoft-edge-v93/ba-p/2744505)
+* [Security baseline for Microsoft Edge v95](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-microsoft-edge-v95/ba-p/2897269)
+* [Security baseline for Microsoft Edge v96](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-microsoft-edge-v96/ba-p/2997665)
+* [Security baseline for Microsoft Edge v97](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-microsoft-edge-v97/ba-p/3062252)
+* [Security baseline for Microsoft Edge v98](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-microsoft-edge-v98/ba-p/3165443)
+* [Security baseline for Microsoft Edge v99](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-microsoft-edge-v99/ba-p/3249241)
+* [Security baseline for Microsoft Edge v100](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-microsoft-edge-v100/ba-p/3281982)
+* [Security baseline for Microsoft Edge v101](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-microsoft-edge-v101/ba-p/3298140)
+* [Security baseline for Microsoft Edge v102](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-microsoft-edge-v102/ba-p/3465195)
+* [Security baseline for Microsoft Edge v103](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-microsoft-edge-v103/ba-p/3548236)
+* [Security baseline for Microsoft Edge v104](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-microsoft-edge-v104/ba-p/3593826)
+* [Security baseline for Microsoft Edge v105](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-microsoft-edge-v105/ba-p/3615904)
+* [Security baseline for Microsoft Edge v106](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-microsoft-edge-version-106/ba-p/3643958)
+* [Security baseline for Microsoft Edge v107](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-microsoft-edge-v107/ba-p/3678903)
+* [Security baseline for Microsoft Edge v108](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-microsoft-edge-version-108/ba-p/3691250)
+* [Security baseline for Microsoft Edge v109](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-microsoft-edge-version-109/ba-p/3713981)
+* [Security baseline for Microsoft Edge v110](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-microsoft-edge-version-110/ba-p/3740900)
+* [Security baseline for Microsoft Edge v111](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-microsoft-edge-version-111/ba-p/3767483)
+* [Security baseline for Microsoft Edge v112](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-microsoft-edge-version-112/ba-p/3789975)
+* [Security baseline for Microsoft Edge v113](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-microsoft-edge-version-113/ba-p/3814398)
+* [Security baseline for Microsoft Edge v114](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-microsoft-edge-version-114/ba-p/3839728)
+* [Security baseline for Microsoft Edge v115](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-microsoft-edge-version-115/ba-p/3882420)
+* [Security baseline for Microsoft Edge v116](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-review-for-microsoft-edge-version-116/ba-p/3905425)
+* [Security baseline for Microsoft Edge v117](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-microsoft-edge-version-117/ba-p/3930862)
+* [Security baseline for Microsoft Edge v118](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-review-for-microsoft-edge-version-118/ba-p/3955123)
+* [Security baseline for Microsoft Edge v119](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-review-for-microsoft-edge-version-119/ba-p/3978427)
+* [Security baseline for Microsoft Edge v120](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-review-for-microsoft-edge-version-120/ba-p/4009561)
+* [Security baseline for Microsoft Edge v121](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-review-for-microsoft-edge-version-121/ba-p/4057135)
+* [Security baseline for Microsoft Edge v122](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-review-for-microsoft-edge-version-122/ba-p/4073142)
+* [Security baseline for Microsoft Edge v123](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-review-for-microsoft-edge-version-123/ba-p/4098458)
+* [Security baseline for Microsoft Edge v124](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-review-for-microsoft-edge-version-124/ba-p/4124826)
+* [Security baseline for Microsoft Edge v125](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-review-for-microsoft-edge-version-125/ba-p/4146218)
+* [Security baseline for Microsoft Edge v126](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-review-for-microsoft-edge-version-126/ba-p/4168263)
+* [Security baseline for Microsoft Edge v127](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-review-for-microsoft-edge-version-127/ba-p/4205820)
+* [Security baseline for Microsoft Edge v128](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-baseline-for-microsoft-edge-version-128/ba-p/4237524)
+* [Security baseline for Microsoft Edge v129](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-review-for-microsoft-edge-version-129/ba-p/4250551)
+* [Security baseline for Microsoft Edge v130](https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-review-for-microsoft-edge-version-130/ba-p/4273981)
+* [Microsoft Edge - Policies](https://docs.microsoft.com/en-us/DeployEdge/microsoft-edge-policies)
+* [A hint for Office 365 Telemetry](https://twitter.com/milenkowski/status/1326865844215934979)
+* [BSI: Microsoft Office Telemetry Analysis report](https://www.bsi.bund.de/SharedDocs/Downloads/DE/BSI/Publikationen/Studien/Office_Telemetrie/Office_Telemetrie.pdf?__blob=publicationFile&v=5)
+* [Use policy settings to manage privacy controls for Microsoft 365 Apps for enterprise](https://docs.microsoft.com/en-us/deployoffice/privacy/manage-privacy-controls)
+* [DoD Cyber Exchange Public - Security Technical Implementation Guides (STIGs) - Group Policy Objects](https://public.cyber.mil/stigs/gpo/)
+* [BSI SiSyPHuS Win10: Windows 10 Hardening Guideline](https://www.bsi.bund.de/EN/Topics/Cyber-Security/Recommendations/SiSyPHuS_Win10/AP11/SiSyPHuS_AP11.html)
+* [Setup Microsoft Windows or IIS for SSL Perfect Forward Secrecy and TLS 1.2](https://www.hass.de/content/setup-microsoft-windows-or-iis-ssl-perfect-forward-secrecy-and-tls-12)
+* [Nartac Software - IIS Crypto](https://www.nartac.com/Products/IISCrypto/)
+* [Transport Layer Security (TLS) best practices with the .NET Framework](https://docs.microsoft.com/en-us/dotnet/framework/network-programming/tls)
+* [TLS Cipher Suites in Windows Server 2022](https://docs.microsoft.com/en-us/windows/win32/secauthn/tls-cipher-suites-in-windows-server-2022)
+* [Transport Layer Security (TLS) registry settings](https://docs.microsoft.com/en-us/windows-server/security/tls/tls-registry-settings)
+* [Windows Defender Antivirus can now run in a sandbox](https://www.microsoft.com/security/blog/2018/10/26/windows-defender-antivirus-can-now-run-in-a-sandbox/)
+* [KB5005010: Restricting installation of new printer drivers after applying the July 6, 2021 updates](https://support.microsoft.com/en-us/topic/kb5005010-restricting-installation-of-new-printer-drivers-after-applying-the-july-6-2021-updates-31b91c02-05bc-4ada-a7ea-183b129578a7)
+* [admx.help - Group Policy Administrative Templates Catalog](https://admx.help/)
+* [How to Defend Users from Interception Attacks via SMB Client Defense](https://techcommunity.microsoft.com/t5/itops-talk-blog/how-to-defend-users-from-interception-attacks-via-smb-client/ba-p/1494995)
+* [Migrating from Windows PowerShell 5.1 to PowerShell 7](https://learn.microsoft.com/en-us/powershell/scripting/whats-new/migrating-from-windows-powershell-51-to-powershell-7)
+* [Data security and Python in Excel](https://support.microsoft.com/en-us/office/data-security-and-python-in-excel-33cc88a4-4a87-485e-9ff9-f35958278327)
+* [Deprecated features for Windows client](https://learn.microsoft.com/en-us/windows/whats-new/deprecated-features)

@@ -1,4 +1,4 @@
-﻿Function Invoke-HardeningKitty {
+Function Invoke-HardeningKitty {
 
     <#
     .SYNOPSIS
@@ -599,6 +599,18 @@
             [System.Security.AccessControl.AccessControlType]::Allow
         )
         $Acl.AddAccessRule($AccessRule)
+
+        # secedit /configure and /analyze run inside the SCE engine as LocalSystem, which must be able
+        # to read the template and create the database in this directory
+        $SystemSid = New-Object System.Security.Principal.SecurityIdentifier("S-1-5-18")
+        $SystemRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+            $SystemSid,
+            [System.Security.AccessControl.FileSystemRights]::FullControl,
+            ([System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit),
+            [System.Security.AccessControl.PropagationFlags]::None,
+            [System.Security.AccessControl.AccessControlType]::Allow
+        )
+        $Acl.AddAccessRule($SystemRule)
         Set-Acl -Path $Directory.FullName -AclObject $Acl
 
         Return $Directory.FullName
@@ -2519,7 +2531,8 @@
                 }
 
                 $TempFileName = New-HardeningKittyTempFile -Directory $HardeningKittyTempDir -CreateFile
-                $TempDbFileName = New-HardeningKittyTempFile -Directory $HardeningKittyTempDir -CreateFile
+                # No -CreateFile: secedit treats an existing empty file as a corrupt database and creates it itself
+                $TempDbFileName = New-HardeningKittyTempFile -Directory $HardeningKittyTempDir
 
                 &$BinarySecedit /export /cfg $TempFileName /areas $Area | Out-Null
 
@@ -2754,7 +2767,8 @@
                 }
 
                 $TempFileName = New-HardeningKittyTempFile -Directory $HardeningKittyTempDir -CreateFile
-                $TempDbFileName = New-HardeningKittyTempFile -Directory $HardeningKittyTempDir -CreateFile
+                # No -CreateFile: secedit treats an existing empty file as a corrupt database and creates it itself
+                $TempDbFileName = New-HardeningKittyTempFile -Directory $HardeningKittyTempDir
 
                 &$BinarySecedit /export /cfg $TempFileName /areas $Area | Out-Null
 
@@ -2774,6 +2788,11 @@
                         $AccountSid = Translate-SidFromWellkownAccount -AccountName $_
                         # Get account name from system with SID (local translation)
                         $AccountName = Get-AccountFromSid -AccountSid $AccountSid
+                        # secedit templates only accept a SID in the form *S-1-...; an unresolved SID
+                        # (e.g. RESTRICTED SERVICES\PrintSpoolerService) comes back as a bare SID string
+                        If ($AccountName -match '^S-\d+(-\d+)+$') {
+                            $AccountName = "*" + $AccountName
+                        }
                         $ListTranslated += $AccountName
                     }
 
